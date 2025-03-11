@@ -1,0 +1,230 @@
+from unsloth import FastLanguageModel,  is_bfloat16_supported
+from unsloth.chat_templates import get_chat_template
+from trl import SFTTrainer
+from transformers import AutoTokenizer
+from transformers import TrainingArguments
+import pandas as pd
+import json
+
+
+def generate_verifier_prediction(sample, model, tokenizer, args):
+    terminators = [tokenizer.eos_token_id, tokenizer.convert_tokens_to_ids("<|eot_id|>")]
+
+    if args.generation_strategy == "beam":
+
+        outputs = model.generate(
+            input_ids=sample["prompt"].cuda(), 
+            max_new_tokens=args.max_seq_length,
+            eos_token_id=terminators,
+            num_beams=args.num_beams,
+            early_stopping=args.early_stopping,
+            pad_token_id=tokenizer.eos_token_id,
+        )
+    else:
+        outputs = model.generate(
+            input_ids=sample["prompt"].cuda(),
+            max_new_tokens=4096,
+            eos_token_id=terminators,
+            temperature=args.temperature,
+            top_p=args.top_p,
+            pad_token_id=tokenizer.eos_token_id,
+        )
+
+    prediction = tokenizer.decode(outputs[0][sample["prompt"].shape[-1]:].detach().cpu().numpy(), skip_special_tokens=True)
+    prediction = prediction.strip()
+    prediction = 1 if "yes" in prediction else 0
+
+    return prediction
+
+
+def generate_generator_prediction(sample, model, tokenizer, args):
+    terminators = [tokenizer.eos_token_id, tokenizer.convert_tokens_to_ids("<|eot_id|>")]
+    generate = True
+    count = 0
+    temperature = args.temperature
+    top_p = args.top_p
+
+    error = False
+    while(generate):
+        if args.generation_strategy == "temperature":
+            outputs = model.generate(
+                input_ids=sample["prompt"].cuda(),
+                max_new_tokens=args.max_seq_length,
+                eos_token_id=terminators,
+                temperature=temperature,
+                top_p=top_p,
+                pad_token_id=tokenizer.eos_token_id,
+            )
+        else:
+            outputs = model.generate(
+                input_ids=sample["prompt"].cuda(), 
+                max_new_tokens=args.max_seq_length,
+                eos_token_id=terminators,
+                num_beams=args.num_beams,
+                early_stopping=args.early_stopping,
+                pad_token_id=tokenizer.eos_token_id,
+            )
+
+        prediction = tokenizer.decode(outputs[0][sample["prompt"].shape[-1]:].detach().cpu().numpy(), skip_special_tokens=True)
+        # print(prediction)
+
+        if args.prompt_template_name != "basic":
+        # don't take any text before "{" and after "}" as this shouldn't be there by definition
+            ind_end = prediction.find("}") + 1
+            prediction = prediction[0:ind_end]
+            ind_start = prediction.find("{")
+            prediction = prediction[ind_start:]
+            prediction.replace("\n", "")
+            count += 1
+            if count > 1:
+                temperature = 1.0
+                top_p = 0.9
+            if verify_prediction(prediction, args) or count > 5:
+                generate = False
+            if count > 5:
+                print(prediction)
+                if (args.prompt_template_name == "CoT" or args.prompt_template_name == "CoT-long"):
+                    prediction = {'sentences': [], 'label': 'negative'}
+                else:
+                    prediction = {'sentences': []}
+                    print("***warning failed generation***")
+        else:
+            try:
+                lines = prediction.splitlines()
+                lines = [line for line in lines if line.strip()]
+                label = "positive" if "positive" in lines[-1] else "negative"
+                prediction = {"sentences": lines[:-1], "label": label}
+            except:
+                prediction = {'sentences': [], 'label': 'negative'}
+                print("***warning failed generation***")
+            generate = False
+                              
+    if isinstance(prediction, str):        
+        prediction = json.loads(prediction.strip())
+    # print(count)
+    if count > 1:
+        error = True
+
+    return prediction, error
+
+
+def init_model_tokenizer_inference(model_name, tokenizer, args):
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer)
+    tokenizer.pad_token = tokenizer.eos_token
+
+    model, tokenizer = FastLanguageModel.from_pretrained(
+                                model_name=model_name, 
+                                max_seq_length=args.max_seq_length,
+                                dtype=None,
+                                load_in_4bit=True,
+                                # token = "hf_...", # use one if using gated models like meta-llama/Llama-2-7b-hf
+                            )
+
+    tokenizer = get_chat_template(
+                        tokenizer,
+                        chat_template = "llama", # Supports zephyr, chatml, mistral, llama, alpaca, vicuna, vicuna_old, unsloth
+                        mapping = {"role" : "from", "content" : "value", "user" : "human", "assistant" : "gpt"}, # ShareGPT style
+                        map_eos_token = True, # Maps <|im_end|> to </s> instead
+                    )
+    
+    return model, tokenizer
+
+def init_hf_model_tokenizer_inference(model_name, tokenizer, args):
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer)
+
+
+def init_model_tokenizer_trainer(dataset, prompt_template, output_dir, args):
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+    tokenizer.pad_token = tokenizer.eos_token
+
+    model, tokenizer = FastLanguageModel.from_pretrained(
+                                model_name=args.model_name, 
+                                max_seq_length=args.max_seq_length,
+                                dtype=None,
+                                load_in_4bit=True,
+                                # token = "hf_...", # use one if using gated models like meta-llama/Llama-2-7b-hf
+                            )
+
+    tokenizer = get_chat_template(
+                        tokenizer,
+                        chat_template = "llama", # Supports zephyr, chatml, mistral, llama, alpaca, vicuna, vicuna_old, unsloth
+                        mapping = {"role" : "from", "content" : "value", "user" : "human", "assistant" : "gpt"}, # ShareGPT style
+                        map_eos_token = True, # Maps <|im_end|> to </s> instead
+                    )
+    
+    dataset = dataset.map(prompt_template, fn_kwargs={"tokenizer": tokenizer}, load_from_cache_file=False)
+    dataset.set_format("pt", columns=["prompt"], output_all_columns=True)
+    
+    model = FastLanguageModel.get_peft_model(
+                        model,
+                        r = args.lora_r, # Choose any number > 0 ! Suggested 8, 16, 32, 64, 128
+                        target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
+                                        "gate_proj", "up_proj", "down_proj",],
+                        lora_alpha = args.lora_alpha,
+                        lora_dropout = args.lora_dropout, # Supports any, but = 0 is optimized
+                        bias = "none",    # Supports any, but = "none" is optimized
+                        use_gradient_checkpointing = "unsloth", # True or "unsloth" for very long context
+                        random_state = args.seed,
+                        use_rslora = False,  # We support rank stabilized LoRA
+                        loftq_config = None, # And LoftQ
+                            )     
+        
+    training_args = TrainingArguments(
+                                output_dir=output_dir,
+                                learning_rate=args.learning_rate,
+                                per_device_train_batch_size=args.mini_batch_size,
+                                per_device_eval_batch_size=args.mini_batch_size,
+                                logging_dir=f"{output_dir}/logs",
+                                logging_strategy="epoch",
+                                num_train_epochs=args.epochs,
+                                eval_strategy="epoch",
+                                gradient_accumulation_steps=args.accumulation,
+                                warmup_steps=args.warmup_steps,
+                                save_strategy="epoch",
+                                save_total_limit=args.save_total_limit,
+                                label_names=["labels"],
+                                optim = "adamw_8bit",
+                                weight_decay=0.01,
+                                lr_scheduler_type = "linear",
+                                fp16 = not is_bfloat16_supported(),
+                                bf16 = is_bfloat16_supported(),
+                                )
+    
+    trainer = SFTTrainer(model=model,
+                        train_dataset=dataset['train'],
+                        eval_dataset=dataset['validation'],
+                        dataset_text_field="text",
+                        tokenizer=tokenizer,
+                        max_seq_length=args.max_seq_length,
+                        args=training_args,
+                        packing=False
+                        )
+    
+    return model, tokenizer, trainer, dataset
+
+
+def create_df_from_generations(evaluation_dictionary):
+    data = {
+        "report_text": evaluation_dictionary['report_text'],
+        "predicted_incidentals": evaluation_dictionary['predicted_incidentals'],
+    "true_incidentals": evaluation_dictionary['true_incidentals']
+    }
+    df = pd.DataFrame(data)
+    return df
+
+
+def verify_prediction(prediction, args):
+    prediction = prediction.strip()
+    try: 
+        prediction = json.loads(prediction)
+    except:
+        return False
+    if (args.prompt_template_name == "CoT" or args.prompt_template_name == "CoT-long"):
+        if not all(k in prediction for k in ("sentences", "label")):
+            return False
+        if prediction['label'] not in ("positive", "negative"):
+            return False
+    else:
+        if not all(k in prediction for k in ("sentences")):
+            return False
+    return True
