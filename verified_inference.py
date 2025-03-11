@@ -103,7 +103,7 @@ def main():
     binary_results_string = f"Experiment: {exp_name}-binary stats\n\n{report}"
     print(binary_results_string)
 
-    with open(f"{output_dir}/results_on_validation.txt", "w") as text_file:
+    with open(f"{output_dir}/verified_inference_results_on_{args.dataset}.txt", "w") as text_file:
         text_file.write(f"{incidental_results_string}\n\n{binary_results_string}")
 
 

@@ -13,7 +13,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # Data input settings
-    parser.add_argument('--dataset', type=str, default="validation", help="Choose 'train', 'validation', 'test' or 'ext_test'")
+    parser.add_argument('--dataset', type=str, default="test", help="Choose 'train', 'validation', 'test' or 'ext_test'")
     parser.add_argument('--train_data_dir', type=str, default='data/incidentals_train_sents_sb_marked.json',
                         help='the path to the directory containing the training data.')
     parser.add_argument('--val_data_dir', type=str, default='data/incidentals_val_sents_sb_marked.json',
@@ -32,7 +32,7 @@ def parse_args():
 
     # Generation settings
     parser.add_argument('--prompt_template_name', type=str, default="CoT")
-    parser.add_argument('--generation_strategy', type=str, default="temperature")
+    parser.add_argument('--generation_strategy', type=str, default="beam")
     parser.add_argument('--temperature', type=float, default=0.7)
     parser.add_argument('--top_p', type=float, default=0.9)
     parser.add_argument('--num_beams', type=int, default=4)
@@ -55,17 +55,27 @@ def main():
         print("*** WARNING BEAM SEARCH FOR LLAMA NOT SUPPORTED BY UNSLOTH - SETTING BACKEND TO HUGGINGFACE ***")
         args.backend = "hf"
 
-    output_dir = args.generator_model_name
+    output_dir = args.model_name
 
     # Set prompt template - this works but is not a good way to do it.
-    if args.prompt_template_name == "CoT":
-        args.prompt_template = cot_prompt_template
-    elif args.prompt_template_name == "CoT-long":
-        args.prompt_template = cot_prompt_template_long
-    elif args.prompt_template_name == "basic":
-        args.prompt_template = basic_prompt_template
+    if args.backend == "unsloth":
+        if args.prompt_template_name == "CoT":
+            args.prompt_template = cot_prompt_template
+        elif args.prompt_template_name == "CoT-long":
+            args.prompt_template = cot_prompt_template_long
+        elif args.prompt_template_name == "basic":
+            args.prompt_template = basic_prompt_template
+        else:
+            args.prompt_template= standard_prompt_template
     else:
-        args.prompt_template= standard_prompt_template
+        if args.prompt_template_name == "CoT":
+            args.prompt_template = cot_prompt_template_hf
+        elif args.prompt_template_name == "CoT-long":
+            args.prompt_template = cot_prompt_template_long_hf
+        elif args.prompt_template_name == "basic":
+            args.prompt_template = basic_prompt_template_hf
+        else:
+            args.prompt_template= standard_prompt_template_hf
 
     # Load data into huggingface dataset
     ds = load_dataset("json", 
@@ -80,17 +90,17 @@ def main():
         model, tokenizer = model, tokenizer = init_model_tokenizer_inference(args.generator_model_name, args.generator_tokenizer, args)
 
     else:
-        model, tokenizer = init_hf_model_tokenizer_inference(args.model_name, tokenizer, args)
+        model, tokenizer = init_hf_model_tokenizer_inference(args.model_name, args.tokenizer, args)
 
-    eval_dict = evaluate_generator_model(model, tokenizer, ds["validation"], args)
-        
     ds = ds.map(args.prompt_template, fn_kwargs={"tokenizer": tokenizer}, load_from_cache_file=False)
     ds.set_format("pt", columns=["prompt"], output_all_columns=True)
 
-    generation_df = create_df_from_generations(eval_dict)
-    generation_df.to_csv(f"{output_dir}/generations_on_{args.dataset}.csv")
+    eval_dict = evaluate_generator_model(model, tokenizer, ds["validation"], args)
 
-    exp_name = f"Verified inference ({args.num_generations})\n\nModel: {args.generator_model_name}\n\nDataset: {args.dataset}"
+    generation_df = create_df_from_generations(eval_dict)
+    generation_df.to_csv(f"{output_dir}/generations_on_{args.dataset}-{args.generation_strategy}.csv")
+
+    exp_name = f"Standard inference ({args.generation_strategy})\n\nModel: {args.model_name}\n\nDataset: {args.dataset}"
 
     incidental_results_string = f"{exp_name}-incidental stats\n\nPrecision: {eval_dict['precision']}\n\nRecall: {eval_dict['recall']}\n\nF1: {eval_dict['f1']}"
     print(incidental_results_string)
@@ -99,7 +109,7 @@ def main():
     binary_results_string = f"Experiment: {exp_name}-binary stats\n\n{report}"
     print(binary_results_string)
 
-    with open(f"{output_dir}/results_on_validation.txt", "w") as text_file:
+    with open(f"{output_dir}/standard_inference_results_on_{args.dataset}-{args.generation_strategy}.txt", "w") as text_file:
         text_file.write(f"{incidental_results_string}\n\n{binary_results_string}")
 
 
