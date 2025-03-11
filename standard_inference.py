@@ -1,9 +1,12 @@
 import argparse
 from datasets import load_dataset
 from sklearn.metrics import classification_report
+from transformers import BitsAndBytesConfig, AutoModelForSequenceClassification
+from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model, AutoPeftModelForCausalLM
+
 
 from model_utils import init_model_tokenizer_inference, init_hf_model_tokenizer_inference
-from evaluation_utils import create_df_from_generations
+from evaluation_utils import evaluate_generator_model, create_df_from_generations
 from prompt_templates import *
 
 def parse_args():
@@ -48,6 +51,10 @@ def main():
     # parse arguments
     args = parse_args()
 
+    if args.generation_strategy == "beam" and args.backend == "unsloth":
+        print("*** WARNING BEAM SEARCH FOR LLAMA NOT SUPPORTED BY UNSLOTH - SETTING BACKEND TO HUGGINGFACE ***")
+        args.backend = "hf"
+
     output_dir = args.generator_model_name
 
     # Set prompt template - this works but is not a good way to do it.
@@ -73,18 +80,11 @@ def main():
         model, tokenizer = model, tokenizer = init_model_tokenizer_inference(args.generator_model_name, args.generator_tokenizer, args)
 
     else:
-        quantization_config = BitsAndBytesConfig(
-            load_in_4bit = QUANTIZATION,
-        )
-        model = AutoPeftModelForCausalLM.from_pretrained(
-            INFERENCE_MODEL_NAME,
-            quantization_config=quantization_config,
-            device_map='auto'
-        )
+        model, tokenizer = init_hf_model_tokenizer_inference(args.model_name, tokenizer, args)
 
-        tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-       
-    ds = ds.map(args.prompt_template, fn_kwargs={"tokenizer": generator_tokenizer}, load_from_cache_file=False)
+    eval_dict = evaluate_generator_model(model, tokenizer, ds["validation"], args)
+        
+    ds = ds.map(args.prompt_template, fn_kwargs={"tokenizer": tokenizer}, load_from_cache_file=False)
     ds.set_format("pt", columns=["prompt"], output_all_columns=True)
 
     generation_df = create_df_from_generations(eval_dict)

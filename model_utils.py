@@ -1,8 +1,8 @@
 from unsloth import FastLanguageModel,  is_bfloat16_supported
 from unsloth.chat_templates import get_chat_template
 from trl import SFTTrainer
-from transformers import AutoTokenizer
-from transformers import TrainingArguments
+from transformers import AutoTokenizer, BitsAndBytesConfig, TrainingArguments
+from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model, AutoPeftModelForCausalLM
 import pandas as pd
 import json
 
@@ -129,8 +129,19 @@ def init_model_tokenizer_inference(model_name, tokenizer, args):
     
     return model, tokenizer
 
+
 def init_hf_model_tokenizer_inference(model_name, tokenizer, args):
     tokenizer = AutoTokenizer.from_pretrained(tokenizer)
+    quantization_config = BitsAndBytesConfig(
+            load_in_4bit = args.quantization,
+    )
+    model = AutoPeftModelForCausalLM.from_pretrained(
+            model_name,
+            quantization_config=quantization_config,
+            device_map='auto'
+        )
+    
+    return model, tokenizer
 
 
 def init_model_tokenizer_trainer(dataset, prompt_template, output_dir, args):
