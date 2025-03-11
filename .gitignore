@@ -1,0 +1,9 @@
+# data files
+
+*.json
+*.csv
+
+# models
+trained_models/generators
+trained_models/verifiers
+
