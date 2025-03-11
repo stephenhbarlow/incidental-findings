@@ -7,3 +7,12 @@
 trained_models/generators
 trained_models/verifiers
 
+# wandb
+wandb/
+
+# unsloth cache
+unsloth_compiled_cache/
+
+# pycache
+__pycache__
+
