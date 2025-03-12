@@ -126,6 +126,7 @@ def init_model_tokenizer_inference(model_name, tokenizer, args):
                         mapping = {"role" : "from", "content" : "value", "user" : "human", "assistant" : "gpt"}, # ShareGPT style
                         map_eos_token = True, # Maps <|im_end|> to </s> instead
                     )
+    model = FastLanguageModel.for_inference(model)
     
     return model, tokenizer
 
