@@ -2,6 +2,7 @@
 
 *.json
 *.csv
+*.txt
 
 # models
 trained_models/generators
