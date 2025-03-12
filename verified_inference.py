@@ -11,7 +11,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # Data input settings
-    parser.add_argument('--dataset', type=str, default="validation", help="Choose 'train', 'validation', 'test' or 'ext_test'")
+    parser.add_argument('--dataset', type=str, default="test", help="Choose 'train', 'validation', 'test' or 'ext_test'")
     parser.add_argument('--train_data_dir', type=str, default='data/incidentals_train_sents_sb_marked.json',
                         help='the path to the directory containing the training data.')
     parser.add_argument('--val_data_dir', type=str, default='data/incidentals_val_sents_sb_marked.json',
@@ -33,7 +33,7 @@ def parse_args():
     # Generation settings
     parser.add_argument('--prompt_template_name', type=str, default="CoT")
     parser.add_argument('--generation_strategy', type=str, default="temperature")
-    parser.add_argument('--temperature', type=float, default=0.7)
+    parser.add_argument('--temperature', type=float, default=0.5)
     parser.add_argument('--top_p', type=float, default=0.9)
     parser.add_argument('--v_temperature', type=float, default=0.5)
     parser.add_argument('--v_top_p', type=float, default=0.7)
@@ -92,7 +92,7 @@ def main():
     eval_dict = pipeline.evaluate()
 
     generation_df = create_df_from_generations(eval_dict)
-    generation_df.to_csv(f"{output_dir}/generations_on_{args.dataset}.csv")
+    generation_df.to_csv(f"{output_dir}/verified_inference_generations_on_{args.dataset}-{args.num_generations}gens.txt.csv")
 
     exp_name = f"Verified inference ({args.num_generations})\n\nModel: {args.generator_model_name}\n\nDataset: {args.dataset}"
 
@@ -103,7 +103,7 @@ def main():
     binary_results_string = f"Experiment: {exp_name}-binary stats\n\n{report}"
     print(binary_results_string)
 
-    with open(f"{output_dir}/verified_inference_results_on_{args.dataset}.txt", "w") as text_file:
+    with open(f"{output_dir}/verified_inference_results_on_{args.dataset}-{args.num_generations}gens.txt", "w") as text_file:
         text_file.write(f"{incidental_results_string}\n\n{binary_results_string}")
 
 

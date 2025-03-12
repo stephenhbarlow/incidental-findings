@@ -32,10 +32,10 @@ def parse_args():
     # Generation settings
     parser.add_argument('--prompt_template_name', type=str, default="CoT")
     parser.add_argument('--generation_strategy', type=str, default="beam")
-    parser.add_argument('--temperature', type=float, default=0.7)
+    parser.add_argument('--temperature', type=float, default=0.5)
     parser.add_argument('--top_p', type=float, default=0.9)
     parser.add_argument('--num_beams', type=int, default=4)
-    parser.add_argument('--early_stopping', type=bool, default=True)
+    parser.add_argument('--early_stopping', type=bool, default=False)
 
     # other settings
     parser.add_argument('--seed', type=int, default=42,
@@ -88,7 +88,7 @@ def main():
                     )
         
         if args.backend == "unsloth":
-            model, tokenizer = model, tokenizer = init_model_tokenizer_inference(args.generator_model_name, args.generator_tokenizer, args)
+            model, tokenizer = model, tokenizer = init_model_tokenizer_inference(args.model_name, args.tokenizer, args)
 
         else:
             model, tokenizer = init_hf_model_tokenizer_inference(args.model_name, args.tokenizer, args)
@@ -99,7 +99,7 @@ def main():
         eval_dict = evaluate_generator_model(model, tokenizer, ds["validation"], args)
 
         generation_df = create_df_from_generations(eval_dict)
-        generation_df.to_csv(f"{output_dir}/generations_on_{args.dataset}-{args.generation_strategy}.csv")
+        generation_df.to_csv(f"{output_dir}/standard_inference_generations_on_{args.dataset}-{args.generation_strategy}-{args.backend}.csv")
 
         exp_name = f"Standard inference ({args.generation_strategy})\n\nModel: {args.model_name}\n\nDataset: {args.dataset}"
 
@@ -136,7 +136,7 @@ def main():
         binary_results_string = f"Experiment: {args.exp_name}-binary stats\n\n{report}"
         print(binary_results_string)
 
-        with open(f"{output_dir}/verifier_results-{args.generation_strategy}.txt", "w") as text_file:
+        with open(f"{output_dir}/verifier_results-{args.generation_strategy}-{args.backend}.txt", "w") as text_file:
             text_file.write(f"{binary_results_string}")
 
 
