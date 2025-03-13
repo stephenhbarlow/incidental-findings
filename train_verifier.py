@@ -13,7 +13,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # Experiment settings
-    parser.add_argument('--exp_name', type=str, default="llama-3.1-8b_verification-model_dedooped_4_epochs")
+    parser.add_argument('--exp_name', type=str, default="llama-3.1-8b_verification-model_dedooped_4_epochs-1genperneg")
     parser.add_argument('--evaluate_model', type=bool, default=True)
     parser.add_argument('--quantization', type=bool, default=True)
 
@@ -34,10 +34,11 @@ def parse_args():
 
     # Generation settings
     parser.add_argument('--generation_strategy', type=str, default="temperature")
-    parser.add_argument('--temperature', type=float, default=0.5)
-    parser.add_argument('--top_p', type=float, default=0.9)
+    parser.add_argument('--temperature', type=float, default=0.1)
+    parser.add_argument('--top_p', type=float, default=0.1)
     parser.add_argument('--num_beams', type=int, default=4)
     parser.add_argument('--early_stopping', type=bool, default=True)
+    parser.add_argument('--do_sample', type=bool, default=False)
 
     # Data input settings
     parser.add_argument('--train_data_dir', type=str, default='processed_data/verifier_train_dataset_dedoop_strat.csv',

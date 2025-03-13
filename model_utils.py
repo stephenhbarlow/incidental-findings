@@ -2,7 +2,7 @@ from unsloth import FastLanguageModel,  is_bfloat16_supported
 from unsloth.chat_templates import get_chat_template
 from trl import SFTTrainer
 from transformers import AutoTokenizer, BitsAndBytesConfig, TrainingArguments
-from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model, AutoPeftModelForCausalLM
+from peft import AutoPeftModelForCausalLM
 import pandas as pd
 import json
 
@@ -19,6 +19,7 @@ def generate_verifier_prediction(sample, model, tokenizer, args):
             num_beams=args.num_beams,
             early_stopping=args.early_stopping,
             pad_token_id=tokenizer.eos_token_id,
+            do_sample=args.do_sample,
         )
     else:
         outputs = model.generate(
@@ -28,6 +29,7 @@ def generate_verifier_prediction(sample, model, tokenizer, args):
             temperature=args.temperature,
             top_p=args.top_p,
             pad_token_id=tokenizer.eos_token_id,
+            do_sample=args.do_sample,
         )
 
     prediction = tokenizer.decode(outputs[0][sample["prompt"].shape[-1]:].detach().cpu().numpy(), skip_special_tokens=True)
@@ -54,6 +56,7 @@ def generate_generator_prediction(sample, model, tokenizer, args):
                 temperature=temperature,
                 top_p=top_p,
                 pad_token_id=tokenizer.eos_token_id,
+                do_sample=args.do_sample,
             )
         else:
             outputs = model.generate(
@@ -63,6 +66,7 @@ def generate_generator_prediction(sample, model, tokenizer, args):
                 num_beams=args.num_beams,
                 early_stopping=args.early_stopping,
                 pad_token_id=tokenizer.eos_token_id,
+                do_sample=args.do_sample,
             )
 
         prediction = tokenizer.decode(outputs[0][sample["prompt"].shape[-1]:].detach().cpu().numpy(), skip_special_tokens=True)

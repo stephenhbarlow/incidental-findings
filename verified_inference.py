@@ -23,7 +23,7 @@ def parse_args():
     
     # Model settings
     parser.add_argument('--generator_model_name', type=str, default="trained_models/generators/llama-3.1-8b_generator-model_3_epoch")
-    parser.add_argument('--verifier_model_name', type=str, default="trained_models/verifiers/llama-3.1-8b_verification-model_dedooped_4_epochs")
+    parser.add_argument('--verifier_model_name', type=str, default="trained_models/verifiers//llama-3.1-8b_verification-model_dedooped_4_epochs-1genperneg")
     parser.add_argument('--generator_tokenizer', type=str, default="meta-llama/Llama-3.1-8B-Instruct")
     parser.add_argument('--verifier_tokenizer', type=str, default="meta-llama/Llama-3.1-8B-Instruct")
     parser.add_argument('--max_seq_length', type=int, default=4096)
@@ -33,12 +33,13 @@ def parse_args():
     # Generation settings
     parser.add_argument('--prompt_template_name', type=str, default="CoT")
     parser.add_argument('--generation_strategy', type=str, default="temperature")
-    parser.add_argument('--temperature', type=float, default=0.5)
-    parser.add_argument('--top_p', type=float, default=0.9)
-    parser.add_argument('--v_temperature', type=float, default=0.5)
-    parser.add_argument('--v_top_p', type=float, default=0.7)
+    parser.add_argument('--temperature', type=float, default=0.1)
+    parser.add_argument('--top_p', type=float, default=0.2)
+    parser.add_argument('--v_temperature', type=float, default=0.0)
+    parser.add_argument('--v_top_p', type=float, default=0.1)
     parser.add_argument('--num_beams', type=int, default=4)
     parser.add_argument('--early_stopping', type=bool, default=True)
+    parser.add_argument('--do_sample', type=bool, default=True)
 
     # other settings
     parser.add_argument('--num_generations', type=int, default=10, help="Number of generations for each document.")

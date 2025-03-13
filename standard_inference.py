@@ -27,15 +27,16 @@ def parse_args():
     parser.add_argument('--tokenizer', type=str, default="meta-llama/Llama-3.1-8B-Instruct")
     parser.add_argument('--max_seq_length', type=int, default=4096)
     parser.add_argument('--quantization', type=bool, default=True)
-    parser.add_argument('--backend', type=str, default="hf", help="'hf' or 'unsloth'")
+    parser.add_argument('--backend', type=str, default="unsloth", help="'hf' or 'unsloth'")
 
     # Generation settings
     parser.add_argument('--prompt_template_name', type=str, default="CoT")
-    parser.add_argument('--generation_strategy', type=str, default="beam")
-    parser.add_argument('--temperature', type=float, default=0.5)
-    parser.add_argument('--top_p', type=float, default=0.9)
+    parser.add_argument('--generation_strategy', type=str, default="temperature")
+    parser.add_argument('--temperature', type=float, default=0.1)
+    parser.add_argument('--top_p', type=float, default=0.2)
     parser.add_argument('--num_beams', type=int, default=4)
     parser.add_argument('--early_stopping', type=bool, default=False)
+    parser.add_argument('--do_sample', type=bool, default=True)
 
     # other settings
     parser.add_argument('--seed', type=int, default=42,

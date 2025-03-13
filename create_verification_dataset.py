@@ -9,7 +9,7 @@ def parse_args():
 
     # Experiment settings
 
-    parser.add_argument('--exp_name', type=str, default="dedoop_strat")
+    parser.add_argument('--exp_name', type=str, default="dedoop_strat_balanced")
     
     # Data input settings
     parser.add_argument('--train_data_dir', type=str, default='data/incidentals_train_sents_sb_marked.json',
@@ -26,7 +26,7 @@ def parse_args():
     parser.add_argument('--stratify_by_report', type=bool, default=True)
     parser.add_argument('--de_duplicate_sentences', type=bool, default=True)
     parser.add_argument('--negative_samples', type=int, default=2426)
-    parser.add_argument('--num_neg_examples_per_report', type=int, default=2)
+    parser.add_argument('--num_neg_examples_per_report', type=int, default=1)
     
     # Other settings
     parser.add_argument('--seed', type=int, default=42,
@@ -60,8 +60,8 @@ def main():
     train_df = train.create_verifier_df()
     val_df = val.create_verifier_df()
 
-    train_df.to_csv(f"{args.output_dir}/verifier_train_dataset_{args.exp_name}.csv")
-    val_df.to_csv(f"{args.output_dir}/verifier_val_dataset_{args.exp_name}.csv")
+    train_df.to_csv(f"{args.output_dir}/verifier_train_dataset_{args.exp_name}-{args.num_neg_examples_per_report}.csv")
+    val_df.to_csv(f"{args.output_dir}/verifier_val_dataset_{args.exp_name}-{args.num_neg_examples_per_report}.csv")
 
 
 if __name__ == '__main__':

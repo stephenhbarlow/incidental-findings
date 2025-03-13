@@ -3,7 +3,6 @@ import pandas as pd
 import random
 from unsloth import FastLanguageModel
 from tqdm import tqdm
-from sklearn.metrics import classification_report
 from model_utils import generate_generator_prediction
 from evaluation_utils import normalise_sentence
 
@@ -160,8 +159,9 @@ class VerifiedInferencePipeline(object):
                     input_ids=input_ids,
                     max_new_tokens=10,
                     eos_token_id=terminators,
-                    temperature=self.args.v_temperature,
-                    top_p=self.args.v_top_p,
+                    do_sample=False,
+                    # temperature=self.args.v_temperature,
+                    # top_p=self.args.v_top_p,
                     pad_token_id=self.v_tokenizer.eos_token_id,
                 )
         prediction = self.v_tokenizer.decode(outputs[0][input_ids.shape[-1]:].detach().cpu().numpy(), skip_special_tokens=True)
@@ -216,6 +216,7 @@ class VerifiedInferencePipeline(object):
     def generate_and_verify(self):
         candidate_lists, report_list = self.generate_candidates()
         aif_list = self.create_list_of_aifs(candidate_lists, report_list)
+        print(aif_list)
         label_list = []
         for aif in aif_list:
             if aif:
