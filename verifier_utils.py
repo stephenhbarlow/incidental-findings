@@ -79,8 +79,13 @@ class VerifierDataset(object):
             aifs.append(selection)
             expanded_sents.append(doc_sents)
             labels.append(0)
-            
-        return pd.DataFrame(zip(expanded_pos_docs, expanded_sents, aifs, labels), columns=['text', 'sentences', 'aifs', 'labels'])
+
+        df = pd.DataFrame(zip(expanded_pos_docs, expanded_sents, aifs, labels), columns=['text', 'sentences', 'aifs', 'labels'])
+        if args.upsample_positives:
+            dfs = [df for i in range(args.num_neg_examples_per_report)]
+            df = pd.concat(dfs)
+
+        return df
 
 
     def create_negative_examples_df(self, dataframe, args):
@@ -120,7 +125,7 @@ class VerifierDataset(object):
             
             dataframe = pd.DataFrame(zip(expanded_neg_docs, expanded_sents, aifs, labels), 
                                     columns=['text', 'sentences', 'aifs', 'labels'])
-            dataframe = dataframe.sample(frac=args.negative_samples, random_state=args.seed)
+            dataframe = dataframe.sample(n=args.negative_samples, random_state=args.seed)
                 
         return dataframe
 
@@ -136,6 +141,7 @@ class VerifierDataset(object):
         train_df_neg = self.create_negative_examples_df(neg_sent_df, self.args)
 
         final_reward_df = pd.concat([train_df_pos, train_df_neg]).sample(frac=1, random_state=self.args.seed)
+        final_reward_df = final_reward_df.sample(frac=1, random_state=self.args.seed)
 
         return final_reward_df
      

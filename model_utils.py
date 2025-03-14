@@ -2,7 +2,7 @@ from unsloth import FastLanguageModel,  is_bfloat16_supported
 from unsloth.chat_templates import get_chat_template
 from trl import SFTTrainer
 from transformers import AutoTokenizer, BitsAndBytesConfig, TrainingArguments
-from peft import AutoPeftModelForCausalLM
+from peft import AutoPeftModelForCausalLM, LoraConfig, prepare_model_for_kbit_training, get_peft_model
 import pandas as pd
 import json
 
@@ -120,7 +120,7 @@ def init_model_tokenizer_inference(model_name, tokenizer, args):
                                 model_name=model_name, 
                                 max_seq_length=args.max_seq_length,
                                 dtype=None,
-                                load_in_4bit=True,
+                                load_in_4bit=args.quantization,
                                 # token = "hf_...", # use one if using gated models like meta-llama/Llama-2-7b-hf
                             )
 
@@ -145,46 +145,10 @@ def init_hf_model_tokenizer_inference(model_name, tokenizer, args):
             quantization_config=quantization_config,
             device_map='auto'
         )
-    
+        
     return model, tokenizer
 
-
-def init_model_tokenizer_trainer(dataset, prompt_template, output_dir, args):
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
-    tokenizer.pad_token = tokenizer.eos_token
-
-    model, tokenizer = FastLanguageModel.from_pretrained(
-                                model_name=args.model_name, 
-                                max_seq_length=args.max_seq_length,
-                                dtype=None,
-                                load_in_4bit=True,
-                                # token = "hf_...", # use one if using gated models like meta-llama/Llama-2-7b-hf
-                            )
-
-    tokenizer = get_chat_template(
-                        tokenizer,
-                        chat_template = "llama", # Supports zephyr, chatml, mistral, llama, alpaca, vicuna, vicuna_old, unsloth
-                        mapping = {"role" : "from", "content" : "value", "user" : "human", "assistant" : "gpt"}, # ShareGPT style
-                        map_eos_token = True, # Maps <|im_end|> to </s> instead
-                    )
-    
-    dataset = dataset.map(prompt_template, fn_kwargs={"tokenizer": tokenizer}, load_from_cache_file=False)
-    dataset.set_format("pt", columns=["prompt"], output_all_columns=True)
-    
-    model = FastLanguageModel.get_peft_model(
-                        model,
-                        r = args.lora_r, # Choose any number > 0 ! Suggested 8, 16, 32, 64, 128
-                        target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
-                                        "gate_proj", "up_proj", "down_proj",],
-                        lora_alpha = args.lora_alpha,
-                        lora_dropout = args.lora_dropout, # Supports any, but = 0 is optimized
-                        bias = "none",    # Supports any, but = "none" is optimized
-                        use_gradient_checkpointing = "unsloth", # True or "unsloth" for very long context
-                        random_state = args.seed,
-                        use_rslora = False,  # We support rank stabilized LoRA
-                        loftq_config = None, # And LoftQ
-                            )     
-        
+def _init_trainer(model, tokenizer, dataset, output_dir, args):
     training_args = TrainingArguments(
                                 output_dir=output_dir,
                                 learning_rate=args.learning_rate,
@@ -215,7 +179,80 @@ def init_model_tokenizer_trainer(dataset, prompt_template, output_dir, args):
                         args=training_args,
                         packing=False
                         )
+    return trainer 
+
+
+def init_model_tokenizer_trainer(dataset, prompt_template, output_dir, args):
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+    tokenizer.pad_token = tokenizer.eos_token
+
+    model, tokenizer = FastLanguageModel.from_pretrained(
+                                model_name=args.model_name, 
+                                max_seq_length=args.max_seq_length,
+                                dtype=None,
+                                load_in_4bit=args.quantization,
+                                # token = "hf_...", # use one if using gated models like meta-llama/Llama-2-7b-hf
+                            )
+
+    tokenizer = get_chat_template(
+                        tokenizer,
+                        chat_template = "llama", # Supports zephyr, chatml, mistral, llama, alpaca, vicuna, vicuna_old, unsloth
+                        mapping = {"role" : "from", "content" : "value", "user" : "human", "assistant" : "gpt"}, # ShareGPT style
+                        map_eos_token = True, # Maps <|im_end|> to </s> instead
+                    )
     
+    dataset = dataset.map(prompt_template, fn_kwargs={"tokenizer": tokenizer}, load_from_cache_file=False)
+    dataset.set_format("pt", columns=["prompt"], output_all_columns=True)
+    
+    model = FastLanguageModel.get_peft_model(
+                        model,
+                        r = args.lora_r, # Choose any number > 0 ! Suggested 8, 16, 32, 64, 128
+                        target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
+                                        "gate_proj", "up_proj", "down_proj",],
+                        lora_alpha = args.lora_alpha,
+                        lora_dropout = args.lora_dropout, # Supports any, but = 0 is optimized
+                        bias = "none",    # Supports any, but = "none" is optimized
+                        use_gradient_checkpointing = "unsloth", # True or "unsloth" for very long context
+                        random_state = args.seed,
+                        use_rslora = False,  # We support rank stabilized LoRA
+                        loftq_config = None, # And LoftQ
+                            )
+    
+    trainer = _init_trainer(model, tokenizer, dataset, output_dir, args)     
+    
+    return model, tokenizer, trainer, dataset
+
+
+def init_hf_model_tokenizer_trainer(dataset, prompt_template, output_dir, args):
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+    tokenizer.pad_token = tokenizer.eos_token
+
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer)
+    quantization_config = BitsAndBytesConfig(
+            load_in_4bit = args.quantization,
+        )
+    model = AutoPeftModelForCausalLM.from_pretrained(
+            args.model_name,
+            quantization_config=quantization_config,
+            device_map='auto'
+        )
+    lora_config = LoraConfig(
+            r = args.lora_r, 
+            lora_alpha = args.lora_alpha,
+            target_modules = ['q_proj', 'k_proj', 'v_proj', 'o_proj', 'gate_proj', 'up_proj', 'down_proj'],
+            lora_dropout = args.lora_dropout, 
+            bias = 'none',
+            task_type = 'CAUSAL_LM'
+        )
+
+    model = prepare_model_for_kbit_training(model)
+    model = get_peft_model(model, lora_config)
+
+    dataset = dataset.map(prompt_template)
+    dataset.set_format("pt", columns=["prompt"], output_all_columns=True)
+
+    trainer = _init_trainer(model, tokenizer, dataset, output_dir, args)
+
     return model, tokenizer, trainer, dataset
 
 

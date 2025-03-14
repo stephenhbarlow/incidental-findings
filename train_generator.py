@@ -5,7 +5,7 @@ from sklearn.metrics import classification_report
 import argparse
 import os
 
-from model_utils import init_model_tokenizer_trainer
+from model_utils import init_model_tokenizer_trainer, init_hf_model_tokenizer_trainer
 from prompt_templates import *
 from evaluation_utils import evaluate_generator_model, create_df_from_generations
 
@@ -14,13 +14,13 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # Experiment settings
-    parser.add_argument('--exp_name', type=str, default="llama-3.1-8b_generator-model_3_epoch")
+    parser.add_argument('--exp_name', type=str, default="llama-3.2-3b_generator-model_3_epoch_no_quant")
     parser.add_argument('--evaluate_model', type=bool, default=True)
     parser.add_argument('--prompt_template_name', type=str, default="CoT")
-    parser.add_argument('--quantization', type=bool, default=True)
+    parser.add_argument('--quantization', type=bool, default=False)
 
     # Training settings
-    parser.add_argument('--model_name', type=str, default="meta-llama/Llama-3.1-8B-Instruct")
+    parser.add_argument('--model_name', type=str, default="meta-llama/Llama-3.2-3B-Instruct")
     parser.add_argument('--max_seq_length', type=int, default=4096)
     parser.add_argument('--lora_r', type=int, default=128)
     parser.add_argument('--lora_alpha', type=int, default=64)
@@ -31,14 +31,15 @@ def parse_args():
     parser.add_argument('--epochs', type=int, default=3)
     parser.add_argument('--warmup_steps', type=int, default=10)
     parser.add_argument('--save_total_limit', type=int, default=4)
-
+    parser.add_argument('--backend', type=str, default="unsloth")
 
     # Generation settings
     parser.add_argument('--generation_strategy', type=str, default="temperature")
-    parser.add_argument('--temperature', type=float, default=0.7)
-    parser.add_argument('--top_p', type=float, default=0.9)
+    parser.add_argument('--temperature', type=float, default=0.1)
+    parser.add_argument('--top_p', type=float, default=0.2)
     parser.add_argument('--num_beams', type=int, default=4)
     parser.add_argument('--early_stopping', type=bool, default=True)
+    parser.add_argument('--do_sample', type=bool, default=True)
 
     # Data input settings
     parser.add_argument('--train_data_dir', type=str, default='data/incidentals_train_sents_sb_marked.json',
@@ -92,14 +93,18 @@ def main():
                  )
     
     # Initialise model, tokenizer, trainer and modified dataset
-    model, tokenizer, trainer, ds = init_model_tokenizer_trainer(ds, args.prompt_template, output_dir, args)
+    if args.backend == "unsloth":
+        model, tokenizer, trainer, ds = init_model_tokenizer_trainer(ds, args.prompt_template, output_dir, args)
+    else:
+        model, tokenizer, trainer, ds = init_hf_model_tokenizer_trainer(ds, args.prompt_template, output_dir, args)
     
     # Train model and save 
     trainer.train()
     model.save_pretrained(output_dir)
 
     if args.evaluate_model:
-        FastLanguageModel.for_inference(model)
+        if args.backend == "unsloth":
+            FastLanguageModel.for_inference(model)
         eval_dict = evaluate_generator_model(model, tokenizer, ds["validation"], args)
 
         if not os.path.exists(output_dir):

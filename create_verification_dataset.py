@@ -9,7 +9,7 @@ def parse_args():
 
     # Experiment settings
 
-    parser.add_argument('--exp_name', type=str, default="dedoop_strat_balanced")
+    parser.add_argument('--exp_name', type=str, default="dedoop_strat_balanced_upsample_n3")
     
     # Data input settings
     parser.add_argument('--train_data_dir', type=str, default='data/incidentals_train_sents_sb_marked.json',
@@ -27,6 +27,7 @@ def parse_args():
     parser.add_argument('--de_duplicate_sentences', type=bool, default=True)
     parser.add_argument('--negative_samples', type=int, default=2426)
     parser.add_argument('--num_neg_examples_per_report', type=int, default=1)
+    parser.add_argument('--upsample_positives', type=bool, default=True)
     
     # Other settings
     parser.add_argument('--seed', type=int, default=42,
