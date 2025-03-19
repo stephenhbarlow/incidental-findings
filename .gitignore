@@ -3,10 +3,12 @@
 *.json
 *.csv
 *.txt
+*.sh
 
 # models
 trained_models/generators
 trained_models/verifiers
+trained_models/Llama-2-7b-chat-hf
 
 # wandb
 wandb/

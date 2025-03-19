@@ -1,7 +1,7 @@
 from unsloth import FastLanguageModel,  is_bfloat16_supported
 from unsloth.chat_templates import get_chat_template
 from trl import SFTTrainer
-from transformers import AutoTokenizer, BitsAndBytesConfig, TrainingArguments
+from transformers import AutoTokenizer, BitsAndBytesConfig, TrainingArguments, AutoModelForCausalLM
 from peft import AutoPeftModelForCausalLM, LoraConfig, prepare_model_for_kbit_training, get_peft_model
 import pandas as pd
 import json
@@ -14,7 +14,7 @@ def generate_verifier_prediction(sample, model, tokenizer, args):
 
         outputs = model.generate(
             input_ids=sample["prompt"].cuda(), 
-            max_new_tokens=args.max_seq_length,
+            # max_new_tokens=args.max_seq_length,
             eos_token_id=terminators,
             num_beams=args.num_beams,
             early_stopping=args.early_stopping,
@@ -24,7 +24,7 @@ def generate_verifier_prediction(sample, model, tokenizer, args):
     else:
         outputs = model.generate(
             input_ids=sample["prompt"].cuda(),
-            max_new_tokens=4096,
+            # max_new_tokens=4096,
             eos_token_id=terminators,
             temperature=args.temperature,
             top_p=args.top_p,
@@ -51,22 +51,24 @@ def generate_generator_prediction(sample, model, tokenizer, args):
         if args.generation_strategy == "temperature":
             outputs = model.generate(
                 input_ids=sample["prompt"].cuda(),
-                max_new_tokens=args.max_seq_length,
+                # max_new_tokens=args.max_seq_length,
                 eos_token_id=terminators,
                 temperature=temperature,
                 top_p=top_p,
                 pad_token_id=tokenizer.eos_token_id,
                 do_sample=args.do_sample,
+                max_time=args.max_time,
             )
         else:
             outputs = model.generate(
                 input_ids=sample["prompt"].cuda(), 
-                max_new_tokens=args.max_seq_length,
+                # max_new_tokens=args.max_seq_length,
                 eos_token_id=terminators,
                 num_beams=args.num_beams,
                 early_stopping=args.early_stopping,
                 pad_token_id=tokenizer.eos_token_id,
                 do_sample=args.do_sample,
+                max_time=args.max_time,
             )
 
         prediction = tokenizer.decode(outputs[0][sample["prompt"].shape[-1]:].detach().cpu().numpy(), skip_special_tokens=True)
@@ -145,10 +147,19 @@ def init_hf_model_tokenizer_inference(model_name, tokenizer, args):
             quantization_config=quantization_config,
             device_map='auto'
         )
+    # model = model.merge_and_unload()
         
     return model, tokenizer
 
-def _init_trainer(model, tokenizer, dataset, output_dir, args):
+def _init_trainer(model, tokenizer, dataset, output_dir, args, hf=False):
+
+    if hf:
+        fp16 = True
+        bf16 = False
+    else:
+        fp16 = not is_bfloat16_supported()
+        bf16 = is_bfloat16_supported()
+
     training_args = TrainingArguments(
                                 output_dir=output_dir,
                                 learning_rate=args.learning_rate,
@@ -166,8 +177,8 @@ def _init_trainer(model, tokenizer, dataset, output_dir, args):
                                 optim = "adamw_8bit",
                                 weight_decay=0.01,
                                 lr_scheduler_type = "linear",
-                                fp16 = not is_bfloat16_supported(),
-                                bf16 = is_bfloat16_supported(),
+                                fp16 = fp16,
+                                bf16 = bf16,
                                 )
     
     trainer = SFTTrainer(model=model,
@@ -227,11 +238,10 @@ def init_hf_model_tokenizer_trainer(dataset, prompt_template, output_dir, args):
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
     tokenizer.pad_token = tokenizer.eos_token
 
-    tokenizer = AutoTokenizer.from_pretrained(tokenizer)
     quantization_config = BitsAndBytesConfig(
             load_in_4bit = args.quantization,
         )
-    model = AutoPeftModelForCausalLM.from_pretrained(
+    model = AutoModelForCausalLM.from_pretrained(
             args.model_name,
             quantization_config=quantization_config,
             device_map='auto'
@@ -248,10 +258,10 @@ def init_hf_model_tokenizer_trainer(dataset, prompt_template, output_dir, args):
     model = prepare_model_for_kbit_training(model)
     model = get_peft_model(model, lora_config)
 
-    dataset = dataset.map(prompt_template)
+    dataset = dataset.map(prompt_template, fn_kwargs={"tokenizer": tokenizer}, load_from_cache_file=False)
     dataset.set_format("pt", columns=["prompt"], output_all_columns=True)
 
-    trainer = _init_trainer(model, tokenizer, dataset, output_dir, args)
+    trainer = _init_trainer(model, tokenizer, dataset, output_dir, args, hf=True)
 
     return model, tokenizer, trainer, dataset
 

@@ -22,9 +22,9 @@ def parse_args():
     parser.add_argument('--verifier_val_dir', type=str, default='processed_data/verifier_val_dataset_dedoop_strat.csv')
     
     # Model settings
-    parser.add_argument('--model_name', type=str, default="trained_models/generators/llama-3.1-8b_generator-model_3_epoch")
+    parser.add_argument('--model_name', type=str, default="trained_models/generators/llama-2-7b_generator-model_3_epoch_unsloth")
     parser.add_argument('--model_type', type=str, default="generator", help="'generator or 'verifier'")
-    parser.add_argument('--tokenizer', type=str, default="meta-llama/Llama-3.1-8B-Instruct")
+    parser.add_argument('--tokenizer', type=str, default="meta-llama/Llama-2-7b-chat-hf")
     parser.add_argument('--max_seq_length', type=int, default=4096)
     parser.add_argument('--quantization', type=bool, default=True)
     parser.add_argument('--backend', type=str, default="unsloth", help="'hf' or 'unsloth'")
@@ -32,11 +32,12 @@ def parse_args():
     # Generation settings
     parser.add_argument('--prompt_template_name', type=str, default="CoT")
     parser.add_argument('--generation_strategy', type=str, default="temperature")
-    parser.add_argument('--temperature', type=float, default=0.1)
-    parser.add_argument('--top_p', type=float, default=0.2)
+    parser.add_argument('--temperature', type=float, default=0.5)
+    parser.add_argument('--top_p', type=float, default=0.5)
     parser.add_argument('--num_beams', type=int, default=4)
-    parser.add_argument('--early_stopping', type=bool, default=False)
-    parser.add_argument('--do_sample', type=bool, default=True)
+    parser.add_argument('--early_stopping', type=bool, default=True)
+    parser.add_argument('--do_sample', type=bool, default=False)
+    parser.add_argument('--max_time', type=float, default=60.0)
 
     # other settings
     parser.add_argument('--seed', type=int, default=42,
@@ -97,10 +98,10 @@ def main():
         ds = ds.map(args.prompt_template, fn_kwargs={"tokenizer": tokenizer}, load_from_cache_file=False)
         ds.set_format("pt", columns=["prompt"], output_all_columns=True)
 
-        eval_dict = evaluate_generator_model(model, tokenizer, ds["validation"], args)
+        eval_dict = evaluate_generator_model(model, tokenizer, ds[args.dataset], args)
 
         generation_df = create_df_from_generations(eval_dict)
-        generation_df.to_csv(f"{output_dir}/standard_inference_generations_on_{args.dataset}-{args.generation_strategy}-{args.backend}.csv")
+        generation_df.to_csv(f"{output_dir}/standard_inference_generations_on_{args.dataset}-{args.generation_strategy}-{args.backend}-{args.num_beams}beams-sample{args.do_sample}.csv")
 
         exp_name = f"Standard inference ({args.generation_strategy})\n\nModel: {args.model_name}\n\nDataset: {args.dataset}"
 
@@ -111,7 +112,7 @@ def main():
         binary_results_string = f"Experiment: {exp_name}-binary stats\n\n{report}"
         print(binary_results_string)
 
-        with open(f"{output_dir}/standard_inference_results_on_{args.dataset}-{args.generation_strategy}.txt", "w") as text_file:
+        with open(f"{output_dir}/standard_inference_results_on_{args.dataset}-{args.generation_strategy}-{args.backend}-{args.num_beams}beams-sample{args.do_sample}.txt", "w") as text_file:
             text_file.write(f"{incidental_results_string}\n\n{binary_results_string}")
 
     else:
@@ -137,7 +138,7 @@ def main():
         binary_results_string = f"Experiment: {args.exp_name}-binary stats\n\n{report}"
         print(binary_results_string)
 
-        with open(f"{output_dir}/verifier_results-{args.generation_strategy}-{args.backend}.txt", "w") as text_file:
+        with open(f"{output_dir}/verifier_results-{args.generation_strategy}-{args.backend}-sample{args.do_sample}.txt", "w") as text_file:
             text_file.write(f"{binary_results_string}")
 
 

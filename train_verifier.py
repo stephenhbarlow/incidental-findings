@@ -39,6 +39,7 @@ def parse_args():
     parser.add_argument('--num_beams', type=int, default=4)
     parser.add_argument('--early_stopping', type=bool, default=True)
     parser.add_argument('--do_sample', type=bool, default=False)
+    parser.add_argument('--max_time', type=float, default=120.0)
 
     # Data input settings
     parser.add_argument('--train_data_dir', type=str, default='processed_data/verifier_train_dataset_dedoop_strat.csv',

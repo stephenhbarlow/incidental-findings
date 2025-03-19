@@ -40,6 +40,7 @@ def parse_args():
     parser.add_argument('--num_beams', type=int, default=4)
     parser.add_argument('--early_stopping', type=bool, default=True)
     parser.add_argument('--do_sample', type=bool, default=True)
+    parser.add_argument('--max_time', type=float, default=120.0)
 
     # other settings
     parser.add_argument('--num_generations', type=int, default=10, help="Number of generations for each document.")

@@ -54,10 +54,10 @@ def evaluate_generator_model(model, tokenizer, dataset, args):
         report_texts.append(doc['report_text'])
         prediction, error = generate_generator_prediction(doc, model, tokenizer, args)
         errors.append(error)
-        print("PREDICTION\n\n")
-        print(prediction)
-        print("\n\nGOLD\n\n")
-        print({"sentences": doc['sentences'], "label": "positive" if doc['labels'] == 1 else "negative"})        
+        # print("PREDICTION\n\n")
+        # print(prediction)
+        # print("\n\nGOLD\n\n")
+        # print({"sentences": doc['sentences'], "label": "positive" if doc['labels'] == 1 else "negative"})        
         if args.prompt_template_name == 'CoT':
             class_label = 1 if prediction['label'] == "positive" else 0
         else:

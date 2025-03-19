@@ -14,13 +14,13 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # Experiment settings
-    parser.add_argument('--exp_name', type=str, default="llama-3.2-3b_generator-model_3_epoch_no_quant")
+    parser.add_argument('--exp_name', type=str, default="llama-2-7b_generator-model_3_epoch_unsloth")
     parser.add_argument('--evaluate_model', type=bool, default=True)
     parser.add_argument('--prompt_template_name', type=str, default="CoT")
-    parser.add_argument('--quantization', type=bool, default=False)
+    parser.add_argument('--quantization', type=bool, default=True)
 
     # Training settings
-    parser.add_argument('--model_name', type=str, default="meta-llama/Llama-3.2-3B-Instruct")
+    parser.add_argument('--model_name', type=str, default="meta-llama/Llama-2-7b-chat-hf")
     parser.add_argument('--max_seq_length', type=int, default=4096)
     parser.add_argument('--lora_r', type=int, default=128)
     parser.add_argument('--lora_alpha', type=int, default=64)
@@ -40,6 +40,7 @@ def parse_args():
     parser.add_argument('--num_beams', type=int, default=4)
     parser.add_argument('--early_stopping', type=bool, default=True)
     parser.add_argument('--do_sample', type=bool, default=True)
+    parser.add_argument('--max_time', type=float, default=120.0)
 
     # Data input settings
     parser.add_argument('--train_data_dir', type=str, default='data/incidentals_train_sents_sb_marked.json',
@@ -74,14 +75,24 @@ def main():
     output_dir = f"{args.base_output_dir}/{args.exp_name}"
 
     # Set prompt template - this works but is not a good way to do it.
-    if args.prompt_template_name == "CoT":
-        args.prompt_template = cot_prompt_template
-    elif args.prompt_template_name == "CoT-long":
-        args.prompt_template = cot_prompt_template_long
-    elif args.prompt_template_name == "basic":
-        args.prompt_template = basic_prompt_template
+    if args.backend == "unsloth":
+        if args.prompt_template_name == "CoT":
+            args.prompt_template = cot_prompt_template
+        elif args.prompt_template_name == "CoT-long":
+            args.prompt_template = cot_prompt_template_long
+        elif args.prompt_template_name == "basic":
+            args.prompt_template = basic_prompt_template
+        else:
+            args.prompt_template= standard_prompt_template
     else:
-        args.prompt_template= standard_prompt_template
+        if args.prompt_template_name == "CoT":
+            args.prompt_template = cot_prompt_template_hf
+        elif args.prompt_template_name == "CoT-long":
+            args.prompt_template = cot_prompt_template_long_hf
+        elif args.prompt_template_name == "basic":
+            args.prompt_template = basic_prompt_template_hf
+        else:
+            args.prompt_template= standard_prompt_template_hf
 
     # Load data into huggingface dataset
     ds = load_dataset("json", 
@@ -105,6 +116,8 @@ def main():
     if args.evaluate_model:
         if args.backend == "unsloth":
             FastLanguageModel.for_inference(model)
+        # else:
+        #     model = model.merge_and_unload()
         eval_dict = evaluate_generator_model(model, tokenizer, ds["validation"], args)
 
         if not os.path.exists(output_dir):
