@@ -14,13 +14,14 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # Experiment settings
-    parser.add_argument('--exp_name', type=str, default="llama-2-7b_generator-model_3_epoch_unsloth")
+    parser.add_argument('--exp_name', type=str, default="llama-31-8b_generator-model_3_epoch_unsloth")
     parser.add_argument('--evaluate_model', type=bool, default=True)
     parser.add_argument('--prompt_template_name', type=str, default="CoT")
     parser.add_argument('--quantization', type=bool, default=True)
 
     # Training settings
-    parser.add_argument('--model_name', type=str, default="meta-llama/Llama-2-7b-chat-hf")
+    parser.add_argument('--model_name', type=str, default="meta-llama/Llama-3.1-8B-Instruct")
+    parser.add_argument('--unsloth_chat_template', type=str, default="llama")
     parser.add_argument('--max_seq_length', type=int, default=4096)
     parser.add_argument('--lora_r', type=int, default=128)
     parser.add_argument('--lora_alpha', type=int, default=64)
@@ -30,13 +31,13 @@ def parse_args():
     parser.add_argument('--accumulation', type=int, default=8)
     parser.add_argument('--epochs', type=int, default=3)
     parser.add_argument('--warmup_steps', type=int, default=10)
-    parser.add_argument('--save_total_limit', type=int, default=4)
+    parser.add_argument('--save_total_limit', type=int, default=1)
     parser.add_argument('--backend', type=str, default="unsloth")
 
     # Generation settings
     parser.add_argument('--generation_strategy', type=str, default="temperature")
-    parser.add_argument('--temperature', type=float, default=0.1)
-    parser.add_argument('--top_p', type=float, default=0.2)
+    parser.add_argument('--temperature', type=float, default=0.5)
+    parser.add_argument('--top_p', type=float, default=0.5)
     parser.add_argument('--num_beams', type=int, default=4)
     parser.add_argument('--early_stopping', type=bool, default=True)
     parser.add_argument('--do_sample', type=bool, default=True)
@@ -72,7 +73,7 @@ def main():
     random.seed(args.seed)
 
     # Set output directory
-    output_dir = f"{args.base_output_dir}/{args.exp_name}"
+    output_dir = f"{args.base_output_dir}/{args.exp_name}{args.lora_r}"
 
     # Set prompt template - this works but is not a good way to do it.
     if args.backend == "unsloth":

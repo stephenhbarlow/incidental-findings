@@ -30,6 +30,7 @@ def parse_args():
     parser.add_argument('--epochs', type=int, default=4)
     parser.add_argument('--warmup_steps', type=int, default=10)
     parser.add_argument('--save_total_limit', type=int, default=4)
+    parser.add_argument('--unsloth_chat_template', type=str, default="llama")
 
 
     # Generation settings

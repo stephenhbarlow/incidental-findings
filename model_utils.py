@@ -128,7 +128,7 @@ def init_model_tokenizer_inference(model_name, tokenizer, args):
 
     tokenizer = get_chat_template(
                         tokenizer,
-                        chat_template = "llama", # Supports zephyr, chatml, mistral, llama, alpaca, vicuna, vicuna_old, unsloth
+                        chat_template = args.unsloth_chat_template, # Supports zephyr, chatml, mistral, llama, alpaca, vicuna, vicuna_old, unsloth
                         mapping = {"role" : "from", "content" : "value", "user" : "human", "assistant" : "gpt"}, # ShareGPT style
                         map_eos_token = True, # Maps <|im_end|> to </s> instead
                     )
@@ -207,7 +207,7 @@ def init_model_tokenizer_trainer(dataset, prompt_template, output_dir, args):
 
     tokenizer = get_chat_template(
                         tokenizer,
-                        chat_template = "llama", # Supports zephyr, chatml, mistral, llama, alpaca, vicuna, vicuna_old, unsloth
+                        chat_template = args.unsloth_chat_template, # Supports zephyr, chatml, mistral, llama, alpaca, vicuna, vicuna_old, unsloth
                         mapping = {"role" : "from", "content" : "value", "user" : "human", "assistant" : "gpt"}, # ShareGPT style
                         map_eos_token = True, # Maps <|im_end|> to </s> instead
                     )

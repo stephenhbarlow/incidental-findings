@@ -28,6 +28,7 @@ def parse_args():
     parser.add_argument('--verifier_tokenizer', type=str, default="meta-llama/Llama-3.1-8B-Instruct")
     parser.add_argument('--max_seq_length', type=int, default=4096)
     parser.add_argument('--quantization', type=bool, default=True)
+    parser.add_argument('--unsloth_chat_template', type=str, default="llama")
 
 
     # Generation settings

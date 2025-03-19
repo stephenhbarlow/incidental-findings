@@ -28,6 +28,8 @@ def parse_args():
     parser.add_argument('--max_seq_length', type=int, default=4096)
     parser.add_argument('--quantization', type=bool, default=True)
     parser.add_argument('--backend', type=str, default="unsloth", help="'hf' or 'unsloth'")
+    parser.add_argument('--unsloth_chat_template', type=str, default="llama")
+
 
     # Generation settings
     parser.add_argument('--prompt_template_name', type=str, default="CoT")
