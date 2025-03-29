@@ -1,5 +1,5 @@
 from unsloth import FastLanguageModel,  is_bfloat16_supported
-from unsloth.chat_templates import get_chat_template
+from unsloth.chat_templates import get_chat_template, train_on_responses_only
 from trl import SFTTrainer
 from transformers import AutoTokenizer, BitsAndBytesConfig, TrainingArguments, AutoModelForCausalLM
 from peft import AutoPeftModelForCausalLM, LoraConfig, prepare_model_for_kbit_training, get_peft_model
@@ -72,7 +72,6 @@ def generate_generator_prediction(sample, model, tokenizer, args):
             )
 
         prediction = tokenizer.decode(outputs[0][sample["prompt"].shape[-1]:].detach().cpu().numpy(), skip_special_tokens=True)
-        # print(prediction)
 
         if args.prompt_template_name != "basic":
         # don't take any text before "{" and after "}" as this shouldn't be there by definition
@@ -139,14 +138,20 @@ def init_model_tokenizer_inference(model_name, tokenizer, args):
 
 def init_hf_model_tokenizer_inference(model_name, tokenizer, args):
     tokenizer = AutoTokenizer.from_pretrained(tokenizer)
-    quantization_config = BitsAndBytesConfig(
-            load_in_4bit = args.quantization,
-    )
-    model = AutoPeftModelForCausalLM.from_pretrained(
-            model_name,
-            quantization_config=quantization_config,
-            device_map='auto'
+    if args.quantization:
+        quantization_config = BitsAndBytesConfig(
+                load_in_4bit = args.quantization,
         )
+        model = AutoPeftModelForCausalLM.from_pretrained(
+                model_name,
+                quantization_config=quantization_config,
+                device_map='auto'
+            )
+    else:
+        model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                device_map='auto'
+            )
     # model = model.merge_and_unload()
         
     return model, tokenizer
@@ -229,7 +234,15 @@ def init_model_tokenizer_trainer(dataset, prompt_template, output_dir, args):
                         loftq_config = None, # And LoftQ
                             )
     
-    trainer = _init_trainer(model, tokenizer, dataset, output_dir, args)     
+    trainer = _init_trainer(model, tokenizer, dataset, output_dir, args)
+    
+    if args.completions_only:   
+        trainer = train_on_responses_only(
+                    trainer,
+                    instruction_part = "<|start_header_id|>user<|end_header_id|>\n\n",
+                    response_part = "<|start_header_id|>assistant<|end_header_id|>\n\n",
+                )
+            
     
     return model, tokenizer, trainer, dataset
 

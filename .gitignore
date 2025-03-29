@@ -1,9 +1,12 @@
 # data files
-
 *.json
 *.csv
 *.txt
 *.sh
+
+# data-based prompts
+in_context_prompt_templates.py
+base_model_inference.py
 
 # models
 trained_models/generators

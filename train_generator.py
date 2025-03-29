@@ -23,7 +23,7 @@ def parse_args():
     parser.add_argument('--model_name', type=str, default="meta-llama/Llama-3.1-8B-Instruct")
     parser.add_argument('--unsloth_chat_template', type=str, default="llama")
     parser.add_argument('--max_seq_length', type=int, default=4096)
-    parser.add_argument('--lora_r', type=int, default=128)
+    parser.add_argument('--lora_r', type=int, default=16)
     parser.add_argument('--lora_alpha', type=int, default=64)
     parser.add_argument('--lora_dropout', type=int, default=0)
     parser.add_argument('--learning_rate', type=float, default=2e-4)
@@ -32,7 +32,7 @@ def parse_args():
     parser.add_argument('--epochs', type=int, default=3)
     parser.add_argument('--warmup_steps', type=int, default=10)
     parser.add_argument('--save_total_limit', type=int, default=1)
-    parser.add_argument('--backend', type=str, default="unsloth")
+    parser.add_argument('--backend', type=str, default="hf")
 
     # Generation settings
     parser.add_argument('--generation_strategy', type=str, default="temperature")
@@ -73,7 +73,7 @@ def main():
     random.seed(args.seed)
 
     # Set output directory
-    output_dir = f"{args.base_output_dir}/{args.exp_name}{args.lora_r}"
+    output_dir = f"{args.base_output_dir}/{args.exp_name}{args.lora_r}-{args.lora_alpha}"
 
     # Set prompt template - this works but is not a good way to do it.
     if args.backend == "unsloth":

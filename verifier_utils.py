@@ -1,5 +1,6 @@
 from nltk import sent_tokenize
 import pandas as pd
+import numpy as np
 import random
 from unsloth import FastLanguageModel
 from tqdm import tqdm
@@ -29,6 +30,8 @@ class VerifierDataset(object):
     def __init__(self, dataframe, args):
           self.dataframe = dataframe
           self.args = args
+          np.random.seed(self.args.seed)
+
 
     def create_sentence_split_df(self, dataframe):
         docs = dataframe['text'].to_list()
@@ -42,12 +45,35 @@ class VerifierDataset(object):
 
     def de_duplicate_selection(self, selection, doc_sents, aif_list):
         duplication = True
+        # counter = self.args.seed
         while duplication:
             if selection in aif_list:
-                selection = random.choice(doc_sents)
+                # selection = random.choice(doc_sents)
+                selection = np.random.choice(doc_sents).tolist()
+                # np.random.seed(counter* 2)
+                # counter +=1
             else:
                 duplication = False
         return selection
+    
+
+    def upsample_positives(self, dataframe, args):
+        pdf = dataframe[dataframe['labels'] == 1]
+        ndf = dataframe[dataframe['labels'] == 0]
+        pdfs = [pdf for i in range(args.upsample_factor)]
+        pdfs.append(ndf)
+        upsampled_df = pd.concat(pdfs).sample(frac=1, random_state=args.seed)
+        return upsampled_df
+    
+    
+    def final_dataframe_mixture(self, dataframe, ratio, args):
+        positive_subset = dataframe.loc[dataframe["labels"] == 1, :]
+        num_positives = len(positive_subset)
+        negative_ratio = int(ratio * num_positives)
+        negative_subset = dataframe.loc[dataframe["labels"] == 0, :]
+        sampled_negatives = negative_subset.sample(n=negative_ratio, random_state=args.seed)
+        balanced_df = pd.concat([positive_subset, sampled_negatives], ignore_index=True)
+        return balanced_df
 
 
     def create_positive_examples_df(self, dataframe, args):
@@ -73,7 +99,8 @@ class VerifierDataset(object):
                         if aif in sent:
                             doc_sents.remove(sent)
             expanded_pos_docs.append(doc)
-            selection = random.choice(doc_sents)
+            selection = np.random.choice(doc_sents).tolist()
+            # selection = random.choice(doc_sents)
             if args.de_duplicate_sentences:
                     selection = self.de_duplicate_selection(selection, doc_sents, aifs)
             aifs.append(selection)
@@ -82,8 +109,7 @@ class VerifierDataset(object):
 
         df = pd.DataFrame(zip(expanded_pos_docs, expanded_sents, aifs, labels), columns=['text', 'sentences', 'aifs', 'labels'])
         if args.upsample_positives:
-            dfs = [df for i in range(args.num_neg_examples_per_report)]
-            df = pd.concat(dfs)
+            df = self.upsample_positives(df, args)
 
         return df
 
@@ -99,10 +125,11 @@ class VerifierDataset(object):
         labels = []
 
         if args.stratify_by_report:
-            for doc, aif_list, doc_sents in zip(docs, aif_list, doc_sents):
-                for i in range(args.num_neg_examples_per_report):
+            for i in range(args.num_neg_examples_per_report):
+                for doc, aif_list, doc_sents in zip(docs, aif_list, doc_sents):               
                     expanded_neg_docs.append(doc)
-                    selection = random.choice(doc_sents)
+                    # selection = random.choice(doc_sents)
+                    selection = np.random.choice(doc_sents).tolist()
                     if args.de_duplicate_sentences:
                         selection = self.de_duplicate_selection(selection, doc_sents, aifs)
                     aifs.append(selection)
@@ -113,9 +140,7 @@ class VerifierDataset(object):
             dataframe = pd.DataFrame(zip(expanded_neg_docs, expanded_sents, aifs, labels), 
                                     columns=['text', 'sentences', 'aifs', 'labels'])
 
-
         else:
-            print("*WARNING* Stratify is set to false so not de-duplication will happen for negative samples. *WARNING*")
             for doc, aif_list, doc_sents in zip(docs, aif_list, doc_sents):
                 for sent in doc_sents:
                     expanded_neg_docs.append(doc)
@@ -125,7 +150,10 @@ class VerifierDataset(object):
             
             dataframe = pd.DataFrame(zip(expanded_neg_docs, expanded_sents, aifs, labels), 
                                     columns=['text', 'sentences', 'aifs', 'labels'])
-            dataframe = dataframe.sample(n=args.negative_samples, random_state=args.seed)
+            if args.de_duplicate_sentences:
+                dataframe = dataframe.drop_duplicates(subset='aifs')
+            dataframe = dataframe.sample(frac=1, random_state=args.seed)
+            # dataframe = dataframe.sample(n=args.negative_samples, random_state=args.seed)
                 
         return dataframe
 
@@ -142,6 +170,9 @@ class VerifierDataset(object):
 
         final_reward_df = pd.concat([train_df_pos, train_df_neg]).sample(frac=1, random_state=self.args.seed)
         final_reward_df = final_reward_df.sample(frac=1, random_state=self.args.seed)
+        
+        if self.args.use_fixed_ratio:
+            final_reward_df = self.final_dataframe_mixture(final_reward_df, self.args.negative_ratio, self.args).sample(frac=1, random_state=self.args.seed)
 
         return final_reward_df
      
