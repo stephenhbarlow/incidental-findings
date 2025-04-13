@@ -9,7 +9,7 @@ def parse_args():
 
     # Experiment settings
 
-    parser.add_argument('--exp_name', type=str, default="dedoop_upsample4_ratio1")
+    parser.add_argument('--exp_name', type=str, default="dedoop_upsample1_ratio1")
     
     # Data input settings
     parser.add_argument('--train_data_dir', type=str, default='data/incidentals_train_sents_sb_marked.json',
@@ -27,9 +27,9 @@ def parse_args():
     parser.add_argument('--de_duplicate_sentences', type=bool, default=True)
 
     # with 'upsample_positives' set to True this essentially reflects epochs
-    parser.add_argument('--num_neg_examples_per_report', type=int, default=4)
+    parser.add_argument('--num_neg_examples_per_report', type=int, default=1)
     parser.add_argument('--upsample_positives', type=bool, default=True)
-    parser.add_argument('--upsample_factor', type=int, default=4)        
+    parser.add_argument('--upsample_factor', type=int, default=1)        
     parser.add_argument('--use_fixed_ratio', type=bool, default=True)
     parser.add_argument('--negative_ratio', type=float, default=1.0)
     

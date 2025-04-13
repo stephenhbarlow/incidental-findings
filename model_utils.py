@@ -45,6 +45,7 @@ def generate_generator_prediction(sample, model, tokenizer, args):
     count = 0
     temperature = args.temperature
     top_p = args.top_p
+    do_sample = args.do_sample
 
     error = False
     while(generate):
@@ -56,7 +57,7 @@ def generate_generator_prediction(sample, model, tokenizer, args):
                 temperature=temperature,
                 top_p=top_p,
                 pad_token_id=tokenizer.eos_token_id,
-                do_sample=args.do_sample,
+                do_sample=do_sample,
                 max_time=args.max_time,
             )
         else:
@@ -67,13 +68,13 @@ def generate_generator_prediction(sample, model, tokenizer, args):
                 num_beams=args.num_beams,
                 early_stopping=args.early_stopping,
                 pad_token_id=tokenizer.eos_token_id,
-                do_sample=args.do_sample,
+                do_sample=do_sample,
                 max_time=args.max_time,
             )
 
         prediction = tokenizer.decode(outputs[0][sample["prompt"].shape[-1]:].detach().cpu().numpy(), skip_special_tokens=True)
 
-        if args.prompt_template_name != "basic":
+        if "basic" not in args.prompt_template_name:
         # don't take any text before "{" and after "}" as this shouldn't be there by definition
             ind_end = prediction.find("}") + 1
             prediction = prediction[0:ind_end]
@@ -82,11 +83,12 @@ def generate_generator_prediction(sample, model, tokenizer, args):
             prediction.replace("\n", "")
             count += 1
             if count > 1:
-                temperature = 1.0
-                top_p = 0.9
-            if verify_prediction(prediction, args) or count > 5:
+                do_sample = True
+                temperature = 0.5
+                top_p = 0.5
+            if verify_prediction(prediction, args) or count > 10:
                 generate = False
-            if count > 5:
+            if count > 10:
                 print(prediction)
                 if (args.prompt_template_name == "CoT" or args.prompt_template_name == "CoT-long"):
                     prediction = {'sentences': [], 'label': 'negative'}
@@ -97,8 +99,12 @@ def generate_generator_prediction(sample, model, tokenizer, args):
             try:
                 lines = prediction.splitlines()
                 lines = [line for line in lines if line.strip()]
-                label = "positive" if "positive" in lines[-1] else "negative"
-                prediction = {"sentences": lines[:-1], "label": label}
+                if args.prompt_template_name == "basic":
+                    label = "positive" if "positive" in lines[-1] else "negative"
+                    prediction = {"sentences": lines[:-1], "label": label}
+                else:
+                    label = "positive" if lines else "negative"
+                    prediction = {"sentences": lines, "label": label}
             except:
                 prediction = {'sentences': [], 'label': 'negative'}
                 print("***warning failed generation***")
@@ -236,13 +242,12 @@ def init_model_tokenizer_trainer(dataset, prompt_template, output_dir, args):
     
     trainer = _init_trainer(model, tokenizer, dataset, output_dir, args)
     
-    if args.completions_only:   
+    if args.completions_only:
         trainer = train_on_responses_only(
                     trainer,
                     instruction_part = "<|start_header_id|>user<|end_header_id|>\n\n",
                     response_part = "<|start_header_id|>assistant<|end_header_id|>\n\n",
                 )
-            
     
     return model, tokenizer, trainer, dataset
 
@@ -300,7 +305,7 @@ def verify_prediction(prediction, args):
             return False
         if prediction['label'] not in ("positive", "negative"):
             return False
-    else:
-        if not all(k in prediction for k in ("sentences")):
-            return False
+    # else:
+    #     if not all(k in prediction for k in ("sentences")):
+    #         return False
     return True

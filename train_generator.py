@@ -14,9 +14,9 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # Experiment settings
-    parser.add_argument('--exp_name', type=str, default="llama-31-8b_generator-model_3_epoch_unsloth")
+    parser.add_argument('--exp_name', type=str, default="llama-31-8b_generator-model_3_epoch_basic-standard_prompt")
     parser.add_argument('--evaluate_model', type=bool, default=True)
-    parser.add_argument('--prompt_template_name', type=str, default="CoT")
+    parser.add_argument('--prompt_template_name', type=str, default="basic-standard")
     parser.add_argument('--quantization', type=bool, default=True)
 
     # Training settings
@@ -32,7 +32,8 @@ def parse_args():
     parser.add_argument('--epochs', type=int, default=3)
     parser.add_argument('--warmup_steps', type=int, default=10)
     parser.add_argument('--save_total_limit', type=int, default=1)
-    parser.add_argument('--backend', type=str, default="hf")
+    parser.add_argument('--backend', type=str, default="unsloth")
+    parser.add_argument('--completions_only', type=bool, default=False)
 
     # Generation settings
     parser.add_argument('--generation_strategy', type=str, default="temperature")
@@ -40,8 +41,8 @@ def parse_args():
     parser.add_argument('--top_p', type=float, default=0.5)
     parser.add_argument('--num_beams', type=int, default=4)
     parser.add_argument('--early_stopping', type=bool, default=True)
-    parser.add_argument('--do_sample', type=bool, default=True)
-    parser.add_argument('--max_time', type=float, default=120.0)
+    parser.add_argument('--do_sample', type=bool, default=False)
+    parser.add_argument('--max_time', type=float, default=60.0)
 
     # Data input settings
     parser.add_argument('--train_data_dir', type=str, default='data/incidentals_train_sents_sb_marked.json',
@@ -83,6 +84,8 @@ def main():
             args.prompt_template = cot_prompt_template_long
         elif args.prompt_template_name == "basic":
             args.prompt_template = basic_prompt_template
+        elif args.prompt_template_name == "basic-standard":
+            args.prompt_template = basic_standard_prompt_template
         else:
             args.prompt_template= standard_prompt_template
     else:

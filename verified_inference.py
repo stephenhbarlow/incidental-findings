@@ -23,7 +23,7 @@ def parse_args():
     
     # Model settings
     parser.add_argument('--generator_model_name', type=str, default="trained_models/generators/llama-31-8b_generator-model_3_epoch_rank16")
-    parser.add_argument('--verifier_model_name', type=str, default="trained_models/verifiers/llama-3.1-8b_verification-model_dedooped_1_epochs-4upsample-1ratio")
+    parser.add_argument('--verifier_model_name', type=str, default="trained_models/verifiers/llama-3.1-8b_verification-model_dedooped_4_epochs-1upsample-1ratio")
     parser.add_argument('--generator_tokenizer', type=str, default="meta-llama/Llama-3.1-8B-Instruct")
     parser.add_argument('--verifier_tokenizer', type=str, default="meta-llama/Llama-3.1-8B-Instruct")
     parser.add_argument('--max_seq_length', type=int, default=4096)
@@ -95,7 +95,7 @@ def main():
     eval_dict = pipeline.evaluate()
 
     generation_df = create_df_from_generations(eval_dict)
-    generation_df.to_csv(f"{output_dir}/verified_inference_generations_on_{args.dataset}-{args.num_generations}gens-temp{args.temperature}_upsample.csv")
+    generation_df.to_csv(f"{output_dir}/verified_inference_generations_on_{args.dataset}-{args.num_generations}gens-temp{args.temperature}_upsample1-4epochs.csv")
 
     exp_name = f"Verified inference ({args.num_generations})\n\nModel: {args.generator_model_name}\n\nDataset: {args.dataset}"
 
@@ -106,7 +106,7 @@ def main():
     binary_results_string = f"Experiment: {exp_name}-binary stats\n\n{report}"
     print(binary_results_string)
 
-    with open(f"{output_dir}/verified_inference_results_on_{args.dataset}-{args.num_generations}gens-temp{args.temperature}_upsample.txt", "w") as text_file:
+    with open(f"{output_dir}/verified_inference_results_on_{args.dataset}-{args.num_generations}gens-temp{args.temperature}_upsample1-4epochs.txt", "w") as text_file:
         text_file.write(f"{incidental_results_string}\n\n{binary_results_string}")
 
 

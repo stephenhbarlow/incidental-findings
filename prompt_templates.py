@@ -78,6 +78,32 @@ def basic_prompt_template(row, tokenizer=None):
     row['completion_text'] = row_json[2]["value"]
     return row
 
+
+def basic_standard_prompt_template(row, tokenizer=None):
+    system_prompt = "The following text is a PET-CT report for lung cancer:"
+    sents = row['sentences']
+    label = "positive" if row['labels'] == 1 else "negative"
+    output_string = ""
+    for i, sent in enumerate(sents):
+        output_string = output_string + f"{i+1}. {sent}\n\n"
+    # output_string = output_string + f"""Label: "{label}".\n\n"""
+    text = row['text'].strip().lstrip(punctuation).strip()
+    row_json = [{"from": "gpt",
+                 "value": system_prompt,
+                },
+                {"from": "human",
+                 "value": f"""REPORT: {text}\n\nINSTRUCTION: Extract the sentences in the report indicating actionable incidental findings requiring medical intervention.\n\n"""
+                },
+                {"from": "gpt",
+                 "value": output_string
+                }]
+    row['report_text'] = row['text']
+    row["text"] = tokenizer.apply_chat_template(row_json, tokenize=False)
+    row["prompt"] = tokenizer.apply_chat_template(row_json[:2], add_generation_prompt=True, return_tensors="pt")
+    row["prompt text"] = tokenizer.apply_chat_template(row_json[:2], tokenize=False)
+    row['completion_text'] = row_json[2]["value"]
+    return row
+
     
 def cot_prompt_template_long(row, tokenizer=None):
     format_string = """C. Finally, output steps 1 and 2 as a code snippet formatted in the following json schema: {"sentences": list of strings // a list of the actionable incidental findings as strings, or an empty list if there are no actionable incidental findings in the report., "label": string // "positive" if there are any actionable incidental findings in the report, or "negative" only.}"""

@@ -13,7 +13,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # Experiment settings
-    parser.add_argument('--exp_name', type=str, default="llama-3.1-8b_verification-model_dedooped_1_epochs-4upsample-1ratio-completionsonly")
+    parser.add_argument('--exp_name', type=str, default="llama-3.1-8b_verification-model_dedooped_4_epochs-1upsample-1ratio")
     parser.add_argument('--evaluate_model', type=bool, default=True)
     parser.add_argument('--quantization', type=bool, default=True)
 
@@ -26,11 +26,11 @@ def parse_args():
     parser.add_argument('--learning_rate', type=float, default=2e-4)
     parser.add_argument('--mini_batch_size', type=int, default=1)
     parser.add_argument('--accumulation', type=int, default=8)
-    parser.add_argument('--epochs', type=int, default=1)
+    parser.add_argument('--epochs', type=int, default=4)
     parser.add_argument('--warmup_steps', type=int, default=10)
-    parser.add_argument('--save_total_limit', type=int, default=4)
+    parser.add_argument('--save_total_limit', type=int, default=1)
     parser.add_argument('--unsloth_chat_template', type=str, default="llama")
-    parser.add_argument('--completions_only', type=bool, default=True)
+    parser.add_argument('--completions_only', type=bool, default=False)
 
     # Generation settings
     parser.add_argument('--generation_strategy', type=str, default="temperature")
@@ -42,9 +42,9 @@ def parse_args():
     parser.add_argument('--max_time', type=float, default=120.0)
 
     # Data input settings
-    parser.add_argument('--train_data_dir', type=str, default='processed_data/verifier_train_dataset_dedoop_upsample4_ratio1-4.csv',
+    parser.add_argument('--train_data_dir', type=str, default='processed_data/verifier_train_dataset_dedoop_upsample1_ratio1.csv',
                         help='the path to the directory containing the training data.')
-    parser.add_argument('--val_data_dir', type=str, default='processed_data/verifier_val_dataset_dedoop_upsample4_ratio1-4.csv',
+    parser.add_argument('--val_data_dir', type=str, default='processed_data/verifier_val_dataset_dedoop_upsample1_ratio1.csv',
                         help='the path to the directory containing the validation data.')
     
     parser.add_argument('--base_output_dir', type=str, default='trained_models/verifiers/')

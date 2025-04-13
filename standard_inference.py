@@ -22,9 +22,9 @@ def parse_args():
     parser.add_argument('--verifier_val_dir', type=str, default='processed_data/verifier_val_dataset_dedoop_strat.csv')
     
     # Model settings
-    parser.add_argument('--model_name', type=str, default="trained_models/generators/llama-2-7b_generator-model_3_epoch_unsloth")
+    parser.add_argument('--model_name', type=str, default="trained_models/generators/llama-31-8b_generator-model_3_epoch_basic-standard_prompt16-64")
     parser.add_argument('--model_type', type=str, default="generator", help="'generator or 'verifier'")
-    parser.add_argument('--tokenizer', type=str, default="meta-llama/Llama-2-7b-chat-hf")
+    parser.add_argument('--tokenizer', type=str, default="meta-llama/Llama-3.1-8B-Instruct")
     parser.add_argument('--max_seq_length', type=int, default=4096)
     parser.add_argument('--quantization', type=bool, default=True)
     parser.add_argument('--backend', type=str, default="unsloth", help="'hf' or 'unsloth'")
@@ -32,7 +32,7 @@ def parse_args():
 
 
     # Generation settings
-    parser.add_argument('--prompt_template_name', type=str, default="CoT")
+    parser.add_argument('--prompt_template_name', type=str, default="basic-standard")
     parser.add_argument('--generation_strategy', type=str, default="temperature")
     parser.add_argument('--temperature', type=float, default=0.5)
     parser.add_argument('--top_p', type=float, default=0.5)
@@ -70,6 +70,8 @@ def main():
                 args.prompt_template = cot_prompt_template_long
             elif args.prompt_template_name == "basic":
                 args.prompt_template = basic_prompt_template
+            elif args.prompt_template_name == "basic-standard":
+                args.prompt_template = basic_standard_prompt_template
             else:
                 args.prompt_template= standard_prompt_template
         else:
@@ -103,18 +105,18 @@ def main():
         eval_dict = evaluate_generator_model(model, tokenizer, ds[args.dataset], args)
 
         generation_df = create_df_from_generations(eval_dict)
-        generation_df.to_csv(f"{output_dir}/standard_inference_generations_on_{args.dataset}-{args.generation_strategy}-{args.backend}-{args.num_beams}beams-sample{args.do_sample}.csv")
+        generation_df.to_csv(f"{output_dir}/standard_inference_generations_on_{args.dataset}-{args.generation_strategy}-{args.backend}-{args.num_beams}beams-sample{args.do_sample}hybrid_sample.csv")
 
         exp_name = f"Standard inference ({args.generation_strategy})\n\nModel: {args.model_name}\n\nDataset: {args.dataset}"
 
-        incidental_results_string = f"{exp_name}-incidental stats\n\nPrecision: {eval_dict['precision']}\n\nRecall: {eval_dict['recall']}\n\nF1: {eval_dict['f1']}"
+        incidental_results_string = f"{exp_name}-incidental stats-{sum(eval_dict['errors'])}errors\n\nPrecision: {eval_dict['precision']}\n\nRecall: {eval_dict['recall']}\n\nF1: {eval_dict['f1']}"
         print(incidental_results_string)
 
         report = classification_report(eval_dict['true_labels'], eval_dict['predicted_labels'], digits=3)
         binary_results_string = f"Experiment: {exp_name}-binary stats\n\n{report}"
         print(binary_results_string)
 
-        with open(f"{output_dir}/standard_inference_results_on_{args.dataset}-{args.generation_strategy}-{args.backend}-{args.num_beams}beams-sample{args.do_sample}.txt", "w") as text_file:
+        with open(f"{output_dir}/standard_inference_results_on_{args.dataset}-{args.generation_strategy}-{args.backend}-{args.num_beams}beams-sample{args.do_sample}hybrid_sample.txt", "w") as text_file:
             text_file.write(f"{incidental_results_string}\n\n{binary_results_string}")
 
     else:
