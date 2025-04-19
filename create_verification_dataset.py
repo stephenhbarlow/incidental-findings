@@ -9,7 +9,7 @@ def parse_args():
 
     # Experiment settings
 
-    parser.add_argument('--exp_name', type=str, default="dedoop_upsample1_ratio1")
+    parser.add_argument('--exp_name', type=str, default="dedoop_upsample4_ratio125_gaussian_sigma_factor2")
     
     # Data input settings
     parser.add_argument('--train_data_dir', type=str, default='data/incidentals_train_sents_sb_marked.json',
@@ -27,11 +27,13 @@ def parse_args():
     parser.add_argument('--de_duplicate_sentences', type=bool, default=True)
 
     # with 'upsample_positives' set to True this essentially reflects epochs
-    parser.add_argument('--num_neg_examples_per_report', type=int, default=1)
+    parser.add_argument('--num_neg_examples_per_report', type=int, default=3)
     parser.add_argument('--upsample_positives', type=bool, default=True)
-    parser.add_argument('--upsample_factor', type=int, default=1)        
+    parser.add_argument('--upsample_factor', type=int, default=4)        
     parser.add_argument('--use_fixed_ratio', type=bool, default=True)
-    parser.add_argument('--negative_ratio', type=float, default=1.0)
+    parser.add_argument('--negative_ratio', type=float, default=1.25)
+    parser.add_argument('--gaussian_sampling', type=bool, default=True)
+    parser.add_argument('--sigma_factor', type=float, default=0.2)
     
     # Other settings
     parser.add_argument('--seed', type=int, default=42,
@@ -62,15 +64,19 @@ def main():
                  )
     
     train = VerifierDataset(ds['train'].to_pandas(), args)
-    val = VerifierDataset(ds['validation'].to_pandas(), args)
-
     train_df = train.create_verifier_df()
     print(f"Train df length: {len(train_df)})")
+    train_df.to_csv(f"{args.output_dir}/verifier_train_dataset_{args.exp_name}.csv")
+
+    args.upsample_positives = False
+    args.gaussian_sampling = False
+    args.stratify_by_report = False
+    args.negative_ratio = 1.0
+
+    val = VerifierDataset(ds['validation'].to_pandas(), args)
     val_df = val.create_verifier_df()
     val_df = val_df.drop_duplicates(subset=['text', 'aifs', 'labels'])
     print(f"Val df length: {len(val_df)})")
-
-    train_df.to_csv(f"{args.output_dir}/verifier_train_dataset_{args.exp_name}.csv")
     val_df.to_csv(f"{args.output_dir}/verifier_val_dataset_{args.exp_name}.csv")
 
 

@@ -25,6 +25,43 @@ def sentence_split(doc):
     return sentence_list
 
 
+def gaussian_random_choice(sentence_list, size=1, mu=None, sigma=None, sigma_factor=0.2):
+    n = len(sentence_list)
+    if mu is None:
+        mu = (n - 1) / 2
+    if sigma is None:
+        sigma = n * sigma_factor
+
+    # Generate enough valid indices
+    indices = []
+    while len(indices) < size:
+        sampled = np.random.normal(loc=mu, scale=sigma, size=size*2).astype(int)
+        valid = sampled[(sampled >= 0) & (sampled < n)]
+        indices.extend(valid[:size - len(indices)])
+
+    sampled = [sentence_list[i] for i in indices]
+    
+    if size == 1:
+        sampled = sampled[0]
+
+    return sampled
+
+
+
+# def random_choice(sentence_list):
+#     selection = np.random.choice(sentence_list)
+#     return selection.tolist()
+
+
+# def select_sample(sentence_list, args):
+#     if args.sampling_strategy == "gaussian" or args.sampling_strategy == "normal":
+#         return gaussian_random_choice(sentence_list)
+#     elif args.sampling_strategy == "standard_t" or args.sampling_strategy == "students":
+#         return students_random_choice(sentence_list)
+#     else:
+#         return random_choice(sentence_list)
+
+
 class VerifierDataset(object):
      
     def __init__(self, dataframe, args):
@@ -43,15 +80,14 @@ class VerifierDataset(object):
                             columns=['text', 'sentences', 'aifs'])
 
 
-    def de_duplicate_selection(self, selection, doc_sents, aif_list):
+    def de_duplicate_selection(self, selection, doc_sents, aif_list, args):
         duplication = True
-        # counter = self.args.seed
         while duplication:
             if selection in aif_list:
-                # selection = random.choice(doc_sents)
-                selection = np.random.choice(doc_sents).tolist()
-                # np.random.seed(counter* 2)
-                # counter +=1
+                if args.gaussian_sampling:
+                    selection = gaussian_random_choice(doc_sents, sigma_factor=args.sigma_factor)
+                else:
+                    selection = np.random.choice(doc_sents).tolist()
             else:
                 duplication = False
         return selection
@@ -99,10 +135,12 @@ class VerifierDataset(object):
                         if aif in sent:
                             doc_sents.remove(sent)
             expanded_pos_docs.append(doc)
-            selection = np.random.choice(doc_sents).tolist()
-            # selection = random.choice(doc_sents)
+            if args.gaussian_sampling:
+                selection = gaussian_random_choice(doc_sents, sigma_factor=args.sigma_factor)
+            else:
+                selection = np.random.choice(doc_sents).tolist()
             if args.de_duplicate_sentences:
-                    selection = self.de_duplicate_selection(selection, doc_sents, aifs)
+                    selection = self.de_duplicate_selection(selection, doc_sents, aifs, args)
             aifs.append(selection)
             expanded_sents.append(doc_sents)
             labels.append(0)
@@ -128,10 +166,12 @@ class VerifierDataset(object):
             for i in range(args.num_neg_examples_per_report):
                 for doc, aif_list, doc_sents in zip(docs, aif_list, doc_sents):               
                     expanded_neg_docs.append(doc)
-                    # selection = random.choice(doc_sents)
-                    selection = np.random.choice(doc_sents).tolist()
+                    if args.gaussian_sampling:
+                        selection = gaussian_random_choice(doc_sents, sigma_factor=args.sigma_factor)
+                    else:
+                        selection = np.random.choice(doc_sents).tolist()
                     if args.de_duplicate_sentences:
-                        selection = self.de_duplicate_selection(selection, doc_sents, aifs)
+                        selection = self.de_duplicate_selection(selection, doc_sents, aifs, args)
                     aifs.append(selection)
                     expanded_sents.append(doc_sents)
                     labels.append(0)
@@ -167,6 +207,7 @@ class VerifierDataset(object):
 
         train_df_pos = self.create_positive_examples_df(pos_sent_df, self.args)
         train_df_neg = self.create_negative_examples_df(neg_sent_df, self.args)
+        print(len(train_df_neg))
 
         final_reward_df = pd.concat([train_df_pos, train_df_neg]).sample(frac=1, random_state=self.args.seed)
         final_reward_df = final_reward_df.sample(frac=1, random_state=self.args.seed)
@@ -253,7 +294,7 @@ class VerifiedInferencePipeline(object):
     def generate_and_verify(self):
         candidate_lists, report_list = self.generate_candidates()
         aif_list = self.create_list_of_aifs(candidate_lists, report_list)
-        print(aif_list)
+        # print(aif_list)
         label_list = []
         for aif in aif_list:
             if aif:
