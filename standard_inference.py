@@ -10,7 +10,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # Data input settings
-    parser.add_argument('--dataset', type=str, default="test", help="Choose 'train', 'validation', 'test' or 'ext_test'")
+    parser.add_argument('--dataset', type=str, default="ext_test", help="Choose 'train', 'validation', 'test' or 'ext_test'")
     parser.add_argument('--train_data_dir', type=str, default='data/incidentals_train_sents_sb_marked.json',
                         help='the path to the directory containing the training data.')
     parser.add_argument('--val_data_dir', type=str, default='data/incidentals_val_sents_sb_marked.json',
@@ -22,7 +22,7 @@ def parse_args():
     parser.add_argument('--verifier_val_dir', type=str, default='processed_data/verifier_val_dataset_dedoop_strat.csv')
     
     # Model settings
-    parser.add_argument('--model_name', type=str, default="trained_models/generators/llama-31-8b_generator-model_3_epoch_basic-standard_prompt16-64")
+    parser.add_argument('--model_name', type=str, default="trained_models/GRPO_generators/llama-31-8b_generator-model_GRPO_finetune_test-GRPO/checkpoint-1000")
     parser.add_argument('--model_type', type=str, default="generator", help="'generator or 'verifier'")
     parser.add_argument('--tokenizer', type=str, default="meta-llama/Llama-3.1-8B-Instruct")
     parser.add_argument('--max_seq_length', type=int, default=4096)
@@ -32,7 +32,7 @@ def parse_args():
 
 
     # Generation settings
-    parser.add_argument('--prompt_template_name', type=str, default="basic-standard")
+    parser.add_argument('--prompt_template_name', type=str, default="CoT")
     parser.add_argument('--generation_strategy', type=str, default="temperature")
     parser.add_argument('--temperature', type=float, default=0.5)
     parser.add_argument('--top_p', type=float, default=0.5)

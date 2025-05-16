@@ -11,6 +11,7 @@ base_model_inference.py
 # models
 trained_models/generators
 trained_models/verifiers
+trained_models/GRPO_generators
 trained_models/Llama-2-7b-chat-hf
 
 # wandb
