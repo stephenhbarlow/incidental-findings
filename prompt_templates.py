@@ -292,5 +292,31 @@ def reward_prompt_template_hf(row, tokenizer=None):
     return row
 
 
+def cot_prompt_template_GRPO(row, tokenizer=None):
+    format_string = """The output should be a markdown code snippet formatted in the following json schema: {"sentences": list of strings // a list of the actionable incidental findings as strings, or an empty list if there are no actionable incidental findings in the report., "label": string // "positive" if there are any actionable incidental findings in the report, or "negative" only.}"""
+    system_prompt = "The following text is a PET-CT report for lung cancer:"
+    sents = row['sentences']
+    label = "positive" if row['labels'] == 1 else "negative"
+    output_dict = {"sentences": sents, "label": label}
+    output_json = json.dumps(output_dict)
+    text = row['text'].strip().lstrip(punctuation).strip()
+    row_json = [{"from": "gpt",
+                "value": system_prompt,
+                },
+                {"from": "human",
+                 "value": f"""REPORT: {text}\n\nINSTRUCTION: Extract the sentences in the report indicating actionable incidental findings requiring medical intervention, then label the overall report "positive" (if there are any actionable incidental findings in the report), or "negative".\n\n{format_string}"""
+                },
+               {"from": "gpt",
+                "value": output_json
+               }]
+    row['report_text'] = row['text']
+    row["text"] = tokenizer.apply_chat_template(row_json, tokenize=False)
+    # row["prompt"] = tokenizer.apply_chat_template(row_json[:2], add_generation_prompt=True, return_tensors="pt")
+    row["prompt"] = tokenizer.apply_chat_template(row_json[:2], tokenize=False)
+    row['completion'] = row_json[2]["value"]
+    row['answer'] = row_json[2]["value"]
+
+    return row
+
 
 

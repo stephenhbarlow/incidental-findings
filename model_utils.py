@@ -1,6 +1,6 @@
 from unsloth import FastLanguageModel,  is_bfloat16_supported
 from unsloth.chat_templates import get_chat_template, train_on_responses_only
-from trl import SFTTrainer
+from trl import SFTTrainer, GRPOTrainer, GRPOConfig
 from transformers import AutoTokenizer, BitsAndBytesConfig, TrainingArguments, AutoModelForCausalLM
 from peft import AutoPeftModelForCausalLM, LoraConfig, prepare_model_for_kbit_training, get_peft_model
 import pandas as pd
@@ -204,6 +204,40 @@ def _init_trainer(model, tokenizer, dataset, output_dir, args, hf=False):
     return trainer 
 
 
+def _init_GRPOTrainer(model, tokenizer, dataset, reward_functions, output_dir, args):
+    training_args = GRPOConfig(
+                        learning_rate=args.learning_rate,
+                        adam_beta1=0.9,
+                        adam_beta2=0.99,
+                        weight_decay=0.1,
+                        warmup_ratio=0.1,
+                        lr_scheduler_type="cosine",
+                        optim="paged_adamw_8bit",
+                        logging_steps = 1,
+                        per_device_train_batch_size=args.mini_batch_size,
+                        gradient_accumulation_steps=args.accumulation, # Increase to 4 for smoother training
+                        num_generations=8, # Decrease if out of memory
+                        max_prompt_length=args.max_prompt_length,
+                        max_completion_length=args.max_seq_length - args.max_prompt_length,
+                        num_train_epochs=args.epochs,
+                        report_to="none",
+                        max_grad_norm=0.1,
+                        save_strategy='epoch',
+                        save_total_limit=args.save_total_limit,
+                        output_dir=output_dir
+                    )
+    
+    trainer = GRPOTrainer(
+        model=model,
+        processing_class=tokenizer,
+        reward_funcs=reward_functions,
+        args=training_args,
+        train_dataset=dataset['train'],
+    )
+    return trainer
+
+
+
 def init_model_tokenizer_trainer(dataset, prompt_template, output_dir, args):
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
     tokenizer.pad_token = tokenizer.eos_token
@@ -281,6 +315,49 @@ def init_hf_model_tokenizer_trainer(dataset, prompt_template, output_dir, args):
 
     trainer = _init_trainer(model, tokenizer, dataset, output_dir, args, hf=True)
 
+    return model, tokenizer, trainer, dataset
+
+
+def init_GRPO_model_tokenizer_trainer(dataset, prompt_template, reward_functions, output_dir, args):
+    tokenizer = AutoTokenizer.from_pretrained(args.base_model_name)
+    tokenizer.pad_token = tokenizer.eos_token
+
+    model, tokenizer = FastLanguageModel.from_pretrained(
+                                                    model_name=args.train_model_name, 
+                                                    max_seq_length=args.max_seq_length, 
+                                                    load_in_4bit=args.quantization, 
+                                                    fast_inference=args.fast_inference,
+                                                    max_lora_rank=args.lora_r,
+                                                    gpu_memory_utilization=args.gpu_utilisation,
+                                                )
+
+    tokenizer = get_chat_template(
+                        tokenizer,
+                        chat_template = args.unsloth_chat_template, # Supports zephyr, chatml, mistral, llama, alpaca, vicuna, vicuna_old, unsloth
+                        mapping = {"role" : "from", "content" : "value", "user" : "human", "assistant" : "gpt"}, # ShareGPT style
+                        map_eos_token = True, # Maps <|im_end|> to </s> instead
+                    )
+    
+    dataset = dataset.map(prompt_template, fn_kwargs={"tokenizer": tokenizer}, load_from_cache_file=False)
+    dataset.set_format("pt", columns=["prompt"], output_all_columns=True)
+    
+    if args.new_lora:
+        model = FastLanguageModel.get_peft_model(
+                            model,
+                            r = args.lora_r, # Choose any number > 0 ! Suggested 8, 16, 32, 64, 128
+                            target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
+                                            "gate_proj", "up_proj", "down_proj",],
+                            lora_alpha = args.lora_alpha,
+                            lora_dropout = args.lora_dropout, # Supports any, but = 0 is optimized
+                            bias = "none",    # Supports any, but = "none" is optimized
+                            use_gradient_checkpointing = "unsloth", # True or "unsloth" for very long context
+                            random_state = args.seed,
+                            use_rslora = False,  # We support rank stabilized LoRA
+                            loftq_config = None, # And LoftQ
+                                )
+    
+    trainer = _init_GRPOTrainer(model, tokenizer, dataset, reward_functions, output_dir, args)
+    
     return model, tokenizer, trainer, dataset
 
 
