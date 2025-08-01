@@ -9,7 +9,7 @@ def parse_args():
 
     # Experiment settings
 
-    parser.add_argument('--exp_name', type=str, default="dedoop_upsample4_ratio125_gaussian_sigma_factor2")
+    parser.add_argument('--exp_name', type=str, default="dedoop_upsample4_ratio15")
     
     # Data input settings
     parser.add_argument('--train_data_dir', type=str, default='data/incidentals_train_sents_sb_marked.json',
@@ -31,8 +31,8 @@ def parse_args():
     parser.add_argument('--upsample_positives', type=bool, default=True)
     parser.add_argument('--upsample_factor', type=int, default=4)        
     parser.add_argument('--use_fixed_ratio', type=bool, default=True)
-    parser.add_argument('--negative_ratio', type=float, default=1.25)
-    parser.add_argument('--gaussian_sampling', type=bool, default=True)
+    parser.add_argument('--negative_ratio', type=float, default=1.5)
+    parser.add_argument('--gaussian_sampling', type=bool, default=False)
     parser.add_argument('--sigma_factor', type=float, default=0.2)
     
     # Other settings
