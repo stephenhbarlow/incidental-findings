@@ -14,6 +14,10 @@ trained_models/verifiers
 trained_models/GRPO_generators
 trained_models/Llama-2-7b-chat-hf
 
+# others
+cross_fold_validation.py
+BERT_baseline_aifs.pdf
+
 # wandb
 wandb/
 
