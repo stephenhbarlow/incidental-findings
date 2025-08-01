@@ -5,6 +5,7 @@ from transformers import AutoTokenizer, BitsAndBytesConfig, TrainingArguments, A
 from peft import AutoPeftModelForCausalLM, LoraConfig, prepare_model_for_kbit_training, get_peft_model
 import pandas as pd
 import json
+import time
 
 
 def generate_verifier_prediction(sample, model, tokenizer, args):
@@ -43,6 +44,8 @@ def generate_generator_prediction(sample, model, tokenizer, args):
     terminators = [tokenizer.eos_token_id, tokenizer.convert_tokens_to_ids("<|eot_id|>")]
     generate = True
     count = 0
+    # start_time = time.time() 
+    # timer = 120
     temperature = args.temperature
     top_p = args.top_p
     do_sample = args.do_sample
@@ -76,6 +79,7 @@ def generate_generator_prediction(sample, model, tokenizer, args):
 
         if "basic" not in args.prompt_template_name:
         # don't take any text before "{" and after "}" as this shouldn't be there by definition
+            
             ind_end = prediction.find("}") + 1
             prediction = prediction[0:ind_end]
             ind_start = prediction.find("{")
@@ -86,9 +90,11 @@ def generate_generator_prediction(sample, model, tokenizer, args):
                 do_sample = True
                 temperature = 0.5
                 top_p = 0.5
-            if verify_prediction(prediction, args) or count > 10:
+
+            # (time.time() > (start_time + timer)
+            if verify_prediction(prediction, args) or (count > 3):
                 generate = False
-            if count > 10:
+            if count > 3:
                 print(prediction)
                 if (args.prompt_template_name == "CoT" or args.prompt_template_name == "CoT-long"):
                     prediction = {'sentences': [], 'label': 'negative'}

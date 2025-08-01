@@ -10,7 +10,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # Data input settings
-    parser.add_argument('--dataset', type=str, default="ext_test", help="Choose 'train', 'validation', 'test' or 'ext_test'")
+    parser.add_argument('--dataset', type=str, default="validation", help="Choose 'train', 'validation', 'test' or 'ext_test'")
     parser.add_argument('--train_data_dir', type=str, default='data/incidentals_train_sents_sb_marked.json',
                         help='the path to the directory containing the training data.')
     parser.add_argument('--val_data_dir', type=str, default='data/incidentals_val_sents_sb_marked.json',
@@ -22,7 +22,7 @@ def parse_args():
     parser.add_argument('--verifier_val_dir', type=str, default='processed_data/verifier_val_dataset_dedoop_strat.csv')
     
     # Model settings
-    parser.add_argument('--model_name', type=str, default="trained_models/GRPO_generators/llama-31-8b_generator-model_GRPO_finetune_test-GRPO/checkpoint-1000")
+    parser.add_argument('--model_name', type=str, default="trained_models/generators/JSL-MedLlama-3-8b_generator-model_3_epoch_CoT_16-64")
     parser.add_argument('--model_type', type=str, default="generator", help="'generator or 'verifier'")
     parser.add_argument('--tokenizer', type=str, default="meta-llama/Llama-3.1-8B-Instruct")
     parser.add_argument('--max_seq_length', type=int, default=4096)
@@ -36,7 +36,7 @@ def parse_args():
     parser.add_argument('--generation_strategy', type=str, default="temperature")
     parser.add_argument('--temperature', type=float, default=0.5)
     parser.add_argument('--top_p', type=float, default=0.5)
-    parser.add_argument('--num_beams', type=int, default=4)
+    parser.add_argument('--num_beams', type=int, default=1)
     parser.add_argument('--early_stopping', type=bool, default=True)
     parser.add_argument('--do_sample', type=bool, default=False)
     parser.add_argument('--max_time', type=float, default=60.0)
@@ -105,7 +105,7 @@ def main():
         eval_dict = evaluate_generator_model(model, tokenizer, ds[args.dataset], args)
 
         generation_df = create_df_from_generations(eval_dict)
-        generation_df.to_csv(f"{output_dir}/standard_inference_generations_on_{args.dataset}-{args.generation_strategy}-{args.backend}-{args.num_beams}beams-sample{args.do_sample}hybrid_sample.csv")
+        generation_df.to_csv(f"{output_dir}/standard_inference_generations_on_{args.dataset}-{args.generation_strategy}-{args.backend}-{args.num_beams}beams-sample{args.do_sample}.csv")
 
         exp_name = f"Standard inference ({args.generation_strategy})\n\nModel: {args.model_name}\n\nDataset: {args.dataset}"
 
@@ -116,7 +116,7 @@ def main():
         binary_results_string = f"Experiment: {exp_name}-binary stats\n\n{report}"
         print(binary_results_string)
 
-        with open(f"{output_dir}/standard_inference_results_on_{args.dataset}-{args.generation_strategy}-{args.backend}-{args.num_beams}beams-sample{args.do_sample}hybrid_sample.txt", "w") as text_file:
+        with open(f"{output_dir}/standard_inference_results_on_{args.dataset}-{args.generation_strategy}-{args.backend}-{args.num_beams}beams-sample{args.do_sample}.txt", "w") as text_file:
             text_file.write(f"{incidental_results_string}\n\n{binary_results_string}")
 
     else:

@@ -13,12 +13,13 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # Experiment settings
-    parser.add_argument('--exp_name', type=str, default="llama-3.1-8b_verification-model_dedooped_1_epochs-4upsample125ratio_gaussian_sigmafactor2_TESTTEST")
+    # parser.add_argument('--exp_name', type=str, default="llama-3.1-8b_verification-model_dedooped_1_epochs-4upsample15ratio_no_gaussian")
+    parser.add_argument('--exp_name', type=str, default="gemma-9b-it-model_dedooped_1_epochs-4upsample15ratio_gaussian_sigmafactor2")
     parser.add_argument('--evaluate_model', type=bool, default=True)
     parser.add_argument('--quantization', type=bool, default=True)
 
     # Training settings
-    parser.add_argument('--model_name', type=str, default="meta-llama/Llama-3.1-8B-Instruct")
+    parser.add_argument('--model_name', type=str, default="google/gemma-2-9b-it")
     parser.add_argument('--max_seq_length', type=int, default=4096)
     parser.add_argument('--lora_r', type=int, default=16)
     parser.add_argument('--lora_alpha', type=int, default=64)
@@ -29,7 +30,7 @@ def parse_args():
     parser.add_argument('--epochs', type=int, default=1)
     parser.add_argument('--warmup_steps', type=int, default=10)
     parser.add_argument('--save_total_limit', type=int, default=4)
-    parser.add_argument('--unsloth_chat_template', type=str, default="llama")
+    parser.add_argument('--unsloth_chat_template', type=str, default="gemma")
     parser.add_argument('--completions_only', type=bool, default=False)
 
     # Generation settings
@@ -42,9 +43,9 @@ def parse_args():
     parser.add_argument('--max_time', type=float, default=120.0)
 
     # Data input settings
-    parser.add_argument('--train_data_dir', type=str, default='processed_data/verifier_train_dataset_dedoop_upsample4_ratio125_gaussian_sigma_factor2.csv',
+    parser.add_argument('--train_data_dir', type=str, default='processed_data/verifier_train_dataset_dedoop_upsample4_ratio15_gaussian_sigma_factor2.csv',
                         help='the path to the directory containing the training data.')
-    parser.add_argument('--val_data_dir', type=str, default='processed_data/verifier_val_dataset_dedoop_upsample4_ratio125_gaussian_sigma_factor2.csv',
+    parser.add_argument('--val_data_dir', type=str, default='processed_data/verifier_val_dataset_dedoop_upsample4_ratio15_gaussian_sigma_factor2.csv',
                         help='the path to the directory containing the validation data.')
     
     parser.add_argument('--base_output_dir', type=str, default='trained_models/verifiers/')

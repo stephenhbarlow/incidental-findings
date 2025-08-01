@@ -22,8 +22,8 @@ def parse_args():
                         help='the path to the directory containing the validation data.')
     
     # Model settings
-    parser.add_argument('--generator_model_name', type=str, default="trained_models/generators/llama-31-8b_generator-model_3_epoch_rank16")
-    parser.add_argument('--verifier_model_name', type=str, default="trained_models/verifiers/llama-3.1-8b_verification-model_dedooped_1_epochs-4upsample125ratio_gaussian_sigmafactor2")
+    parser.add_argument('--generator_model_name', type=str, default="trained_models/generators/llama-31-8b_generator-model_3_epoch_rank16_MAIN_MODEL")
+    parser.add_argument('--verifier_model_name', type=str, default="trained_models/verifiers/llama-3.1-8b_verification-model_dedooped_1_epochs-4upsample15ratio_gaussian_sigmafactor2")
     parser.add_argument('--generator_tokenizer', type=str, default="meta-llama/Llama-3.1-8B-Instruct")
     parser.add_argument('--verifier_tokenizer', type=str, default="meta-llama/Llama-3.1-8B-Instruct")
     parser.add_argument('--max_seq_length', type=int, default=4096)
@@ -44,7 +44,7 @@ def parse_args():
     parser.add_argument('--max_time', type=float, default=120.0)
 
     # other settings
-    parser.add_argument('--num_generations', type=int, default=5, help="Number of generations for each document.")
+    parser.add_argument('--num_generations', type=int, default=4, help="Number of generations for each document.")
     parser.add_argument('--seed', type=int, default=42,
                         help='Initial random seed.')
     
@@ -95,7 +95,7 @@ def main():
     eval_dict = pipeline.evaluate()
 
     generation_df = create_df_from_generations(eval_dict)
-    generation_df.to_csv(f"{output_dir}/verified_inference_generations_on_{args.dataset}-{args.num_generations}gens-temp{args.temperature}_1_epochs-4upsample-125ratio_gaussian_sigmafactor2_5_gens.csv")
+    generation_df.to_csv(f"{output_dir}/verified_inference_generations_on_{args.dataset}-{args.num_generations}gens-temp{args.temperature}-top_p{args.top_p}-1_epochs-4upsample-15ratio_no_gaussian{args.num_generations}gens.csv")
 
     exp_name = f"Verified inference ({args.num_generations})\n\nModel: {args.generator_model_name}\n\nDataset: {args.dataset}"
 
@@ -106,7 +106,7 @@ def main():
     binary_results_string = f"Experiment: {exp_name}-binary stats\n\n{report}"
     print(binary_results_string)
 
-    with open(f"{output_dir}/verified_inference_results_on_{args.dataset}-{args.num_generations}gens-temp{args.temperature}_1_epochs-4upsample-125ratio_gaussian_sigmafactor2_5_gens.txt", "w") as text_file:
+    with open(f"{output_dir}/verified_inference_results_on_{args.dataset}-{args.num_generations}gens-temp{args.temperature}-top_p{args.top_p}-1_epochs-4upsample-15ratio_no_gaussian{args.num_generations}_gens.txt", "w") as text_file:
         text_file.write(f"{incidental_results_string}\n\n{binary_results_string}")
 
 

@@ -229,10 +229,13 @@ class VerifiedInferencePipeline(object):
           self.args = args
 
     def verify_sentence(self, sentence, report):
-        prompt = f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>The following text is a PET-CT report for lung cancer:<|eot_id|><|start_header_id|>user<|end_header_id|>REPORT: {report}\n\nINSTRUCTION: In the context of the report would the following sentence be related to an actionable incidental finding?\n\n"{sentence}"\n\nAnswer 'yes' or 'no' only.<|eot_id|><|start_header_id|>assistant<|end_header_id|>"""
         terminators = [self.v_tokenizer.eos_token_id, self.v_tokenizer.convert_tokens_to_ids("<|eot_id|>")]
-        tokenized_prompt = self.v_tokenizer(prompt, return_tensors='pt')
-        input_ids = tokenized_prompt['input_ids'].cuda()
+        prompt = [{"role": "system", "content": "The following text is a PET-CT report for lung cancer:"},
+                  {"role": "user", "content": f"""REPORT: {report}\n\nINSTRUCTION: In the context of the report would the following sentence be related to an actionable incidental finding?\n\n"{sentence}"\n\nAnswer 'yes' or 'no' only."""}]
+        tokenized_prompt = self.v_tokenizer.apply_chat_template(prompt, add_generation_prompt=True, return_tensors="pt")
+        # prompt = f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>The following text is a PET-CT report for lung cancer:<|eot_id|><|start_header_id|>user<|end_header_id|>REPORT: {report}\n\nINSTRUCTION: In the context of the report would the following sentence be related to an actionable incidental finding?\n\n"{sentence}"\n\nAnswer 'yes' or 'no' only.<|eot_id|><|start_header_id|>assistant<|end_header_id|>"""
+        # tokenized_prompt = self.v_tokenizer(prompt, return_tensors='pt')
+        input_ids = tokenized_prompt.cuda()
         outputs = self.v_model.generate(
                     input_ids=input_ids,
                     max_new_tokens=10,

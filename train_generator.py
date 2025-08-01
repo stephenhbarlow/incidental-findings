@@ -14,14 +14,14 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # Experiment settings
-    parser.add_argument('--exp_name', type=str, default="llama-31-8b_generator-model_3_epoch_basic-standard_prompt")
+    parser.add_argument('--exp_name', type=str, default="Llama-3-8B_generator-model_3_epoch_basic-standard_")
     parser.add_argument('--evaluate_model', type=bool, default=True)
     parser.add_argument('--prompt_template_name', type=str, default="basic-standard")
     parser.add_argument('--quantization', type=bool, default=True)
 
     # Training settings
-    parser.add_argument('--model_name', type=str, default="meta-llama/Llama-3.1-8B-Instruct")
-    parser.add_argument('--unsloth_chat_template', type=str, default="llama")
+    parser.add_argument('--model_name', type=str, default="meta-llama/Meta-Llama-3-8B-Instruct")
+    parser.add_argument('--unsloth_chat_template', type=str, default="llama-3")
     parser.add_argument('--max_seq_length', type=int, default=4096)
     parser.add_argument('--lora_r', type=int, default=16)
     parser.add_argument('--lora_alpha', type=int, default=64)
