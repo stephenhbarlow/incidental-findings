@@ -92,9 +92,9 @@ def generate_generator_prediction(sample, model, tokenizer, args):
                 top_p = 0.5
 
             # (time.time() > (start_time + timer)
-            if verify_prediction(prediction, args) or (count > 3):
+            if verify_prediction(prediction, args) or (count > 1):
                 generate = False
-            if count > 3:
+            if count > 1:
                 print(prediction)
                 if (args.prompt_template_name == "CoT" or args.prompt_template_name == "CoT-long"):
                     prediction = {'sentences': [], 'label': 'negative'}

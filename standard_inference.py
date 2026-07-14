@@ -10,7 +10,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # Data input settings
-    parser.add_argument('--dataset', type=str, default="validation", help="Choose 'train', 'validation', 'test' or 'ext_test'")
+    parser.add_argument('--dataset', type=str, default="test", help="Choose 'train', 'validation', 'test' or 'ext_test'")
     parser.add_argument('--train_data_dir', type=str, default='data/incidentals_train_sents_sb_marked.json',
                         help='the path to the directory containing the training data.')
     parser.add_argument('--val_data_dir', type=str, default='data/incidentals_val_sents_sb_marked.json',
@@ -22,13 +22,13 @@ def parse_args():
     parser.add_argument('--verifier_val_dir', type=str, default='processed_data/verifier_val_dataset_dedoop_strat.csv')
     
     # Model settings
-    parser.add_argument('--model_name', type=str, default="trained_models/generators/JSL-MedLlama-3-8b_generator-model_3_epoch_CoT_16-64")
+    parser.add_argument('--model_name', type=str, default="trained_models/generators/llama3.2-3b_3_epoch_unsloth_r1616-64")
     parser.add_argument('--model_type', type=str, default="generator", help="'generator or 'verifier'")
-    parser.add_argument('--tokenizer', type=str, default="meta-llama/Llama-3.1-8B-Instruct")
+    parser.add_argument('--tokenizer', type=str, default="meta-llama/Llama-3.2-3B-Instruct")
     parser.add_argument('--max_seq_length', type=int, default=4096)
     parser.add_argument('--quantization', type=bool, default=True)
     parser.add_argument('--backend', type=str, default="unsloth", help="'hf' or 'unsloth'")
-    parser.add_argument('--unsloth_chat_template', type=str, default="llama")
+    parser.add_argument('--unsloth_chat_template', type=str, default="llama-3")
 
 
     # Generation settings

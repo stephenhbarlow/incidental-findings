@@ -9,7 +9,7 @@ def parse_args():
 
     # Experiment settings
 
-    parser.add_argument('--exp_name', type=str, default="dedoop_upsample4_ratio15")
+    parser.add_argument('--exp_name', type=str, default="dedoop_upsample4_ratio15_gaussiantrue_sigma0.2")
     
     # Data input settings
     parser.add_argument('--train_data_dir', type=str, default='data/incidentals_train_sents_sb_marked.json',
@@ -32,11 +32,11 @@ def parse_args():
     parser.add_argument('--upsample_factor', type=int, default=4)        
     parser.add_argument('--use_fixed_ratio', type=bool, default=True)
     parser.add_argument('--negative_ratio', type=float, default=1.5)
-    parser.add_argument('--gaussian_sampling', type=bool, default=False)
+    parser.add_argument('--gaussian_sampling', type=bool, default=True)
     parser.add_argument('--sigma_factor', type=float, default=0.2)
     
     # Other settings
-    parser.add_argument('--seed', type=int, default=42,
+    parser.add_argument('--seed', type=int, default=12345,
                         help='Initial random seed.')
     
     """TO SELF: THERE ARE 1559 TRUE AIF SENTENCES EXAMPLES IN DATASET"""
@@ -66,7 +66,7 @@ def main():
     train = VerifierDataset(ds['train'].to_pandas(), args)
     train_df = train.create_verifier_df()
     print(f"Train df length: {len(train_df)})")
-    train_df.to_csv(f"{args.output_dir}/verifier_train_dataset_{args.exp_name}.csv")
+    train_df.to_csv(f"{args.output_dir}/verifier_train_dataset_{args.exp_name}_seed_{args.seed}.csv")
 
     args.upsample_positives = False
     args.gaussian_sampling = False
@@ -77,7 +77,7 @@ def main():
     val_df = val.create_verifier_df()
     val_df = val_df.drop_duplicates(subset=['text', 'aifs', 'labels'])
     print(f"Val df length: {len(val_df)})")
-    val_df.to_csv(f"{args.output_dir}/verifier_val_dataset_{args.exp_name}.csv")
+    val_df.to_csv(f"{args.output_dir}/verifier_val_dataset_{args.exp_name}_seed_{args.seed}.csv")
 
 
 if __name__ == '__main__':

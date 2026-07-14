@@ -3,6 +3,8 @@
 *.csv
 *.txt
 *.sh
+*.docx
+*.pdf
 
 # data-based prompts
 in_context_prompt_templates.py

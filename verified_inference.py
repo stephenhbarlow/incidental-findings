@@ -11,7 +11,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # Data input settings
-    parser.add_argument('--dataset', type=str, default="ext_test", help="Choose 'train', 'validation', 'test' or 'ext_test'")
+    parser.add_argument('--dataset', type=str, default="test", help="Choose 'train', 'validation', 'test' or 'ext_test'")
     parser.add_argument('--train_data_dir', type=str, default='data/incidentals_train_sents_sb_marked.json',
                         help='the path to the directory containing the training data.')
     parser.add_argument('--val_data_dir', type=str, default='data/incidentals_val_sents_sb_marked.json',
@@ -22,13 +22,13 @@ def parse_args():
                         help='the path to the directory containing the validation data.')
     
     # Model settings
-    parser.add_argument('--generator_model_name', type=str, default="trained_models/generators/llama-31-8b_generator-model_3_epoch_rank16_MAIN_MODEL")
-    parser.add_argument('--verifier_model_name', type=str, default="trained_models/verifiers/llama-3.1-8b_verification-model_dedooped_1_epochs-4upsample15ratio_gaussian_sigmafactor2")
-    parser.add_argument('--generator_tokenizer', type=str, default="meta-llama/Llama-3.1-8B-Instruct")
-    parser.add_argument('--verifier_tokenizer', type=str, default="meta-llama/Llama-3.1-8B-Instruct")
+    parser.add_argument('--generator_model_name', type=str, default="trained_models/generators/llama3.2-1b_3_epoch_unsloth_r1616-64")
+    parser.add_argument('--verifier_model_name', type=str, default="trained_models/verifiers/llama-3.2-1b_verification-model_dedooped_1_epochs-4upsample15ratio_gaussian_sigmafactor2_seed_42")
+    parser.add_argument('--generator_tokenizer', type=str, default="meta-llama/Llama-3.2-1B-Instruct")
+    parser.add_argument('--verifier_tokenizer', type=str, default="meta-llama/Llama-3.2-1B-Instruct")
     parser.add_argument('--max_seq_length', type=int, default=4096)
     parser.add_argument('--quantization', type=bool, default=True)
-    parser.add_argument('--unsloth_chat_template', type=str, default="llama")
+    parser.add_argument('--unsloth_chat_template', type=str, default="llama-3")
 
 
     # Generation settings
@@ -38,13 +38,13 @@ def parse_args():
     parser.add_argument('--top_p', type=float, default=0.5)
     parser.add_argument('--v_temperature', type=float, default=0.1)
     parser.add_argument('--v_top_p', type=float, default=0.1)
-    parser.add_argument('--num_beams', type=int, default=4)
+    parser.add_argument('--num_beams', type=int, default=1)
     parser.add_argument('--early_stopping', type=bool, default=True)
     parser.add_argument('--do_sample', type=bool, default=True)
     parser.add_argument('--max_time', type=float, default=120.0)
 
     # other settings
-    parser.add_argument('--num_generations', type=int, default=4, help="Number of generations for each document.")
+    parser.add_argument('--num_generations', type=int, default=10, help="Number of generations for each document.")
     parser.add_argument('--seed', type=int, default=42,
                         help='Initial random seed.')
     
@@ -95,9 +95,9 @@ def main():
     eval_dict = pipeline.evaluate()
 
     generation_df = create_df_from_generations(eval_dict)
-    generation_df.to_csv(f"{output_dir}/verified_inference_generations_on_{args.dataset}-{args.num_generations}gens-temp{args.temperature}-top_p{args.top_p}-1_epochs-4upsample-15ratio_no_gaussian{args.num_generations}gens.csv")
+    generation_df.to_csv(f"{output_dir}/verified_inference_generations_on_{args.dataset}-{args.num_generations}gens-temp{args.temperature}-top_p{args.top_p}-1_epochs-4upsample-15ratio_gaussianTrue{args.num_generations}gens_{args.seed}.csv")
 
-    exp_name = f"Verified inference ({args.num_generations})\n\nModel: {args.generator_model_name}\n\nDataset: {args.dataset}"
+    exp_name = f"Verified inference ({args.num_generations})\n\nGenerator Model: {args.generator_model_name}\n\nVerifier Model: {args.verifier_model_name}\n\nDataset: {args.dataset}"
 
     incidental_results_string = f"{exp_name}-incidental stats\n\nPrecision: {eval_dict['precision']}\n\nRecall: {eval_dict['recall']}\n\nF1: {eval_dict['f1']}"
     print(incidental_results_string)
@@ -106,7 +106,7 @@ def main():
     binary_results_string = f"Experiment: {exp_name}-binary stats\n\n{report}"
     print(binary_results_string)
 
-    with open(f"{output_dir}/verified_inference_results_on_{args.dataset}-{args.num_generations}gens-temp{args.temperature}-top_p{args.top_p}-1_epochs-4upsample-15ratio_no_gaussian{args.num_generations}_gens.txt", "w") as text_file:
+    with open(f"{output_dir}/verified_inference_results_on_{args.dataset}-{args.num_generations}gens-temp{args.temperature}-top_p{args.top_p}-1_epochs-4upsample-15ratio_gaussianTrue{args.num_generations}_gens_{args.seed}.txt", "w") as text_file:
         text_file.write(f"{incidental_results_string}\n\n{binary_results_string}")
 
 
